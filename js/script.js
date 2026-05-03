@@ -268,6 +268,84 @@ Promise.all([
 
   const bubblesG = g.append("g");
 
+  const legendWrap = d3.select("#lifestyle-legend-container");
+  const legendSvg = legendWrap
+    .append("svg")
+    .attr("width", 60)
+    .attr("height", 250);
+
+  legendSvg
+    .append("text")
+    .attr("x", 0)
+    .attr("y", 14)
+    .attr("fill", "#111")
+    .attr("font-size", 11)
+    .attr("font-weight", 700)
+    .text("Urbanization Rate (%)");
+
+  const barX = 26;
+  const barY = 34;
+  const barW = 20;
+  const barH = 200;
+
+  const legendY = d3.scaleLinear().domain([0, 100]).range([barY + barH, barY]);
+
+  const defs = legendSvg.append("defs");
+  const urbanGradient = defs
+    .append("linearGradient")
+    .attr("id", "lifestyle-urban-ylgnbu-gradient")
+    .attr("gradientUnits", "objectBoundingBox")
+    .attr("x1", "0")
+    .attr("x2", "0")
+    .attr("y1", "1")
+    .attr("y2", "0");
+
+  for (let pct = 0; pct <= 100; pct += 1) {
+    const t = 1 - pct / 100;
+    urbanGradient
+      .append("stop")
+      .attr("offset", `${pct}%`)
+      .attr("stop-color", d3.interpolateYlGnBu(t));
+  }
+
+  legendSvg
+    .append("rect")
+    .attr("x", barX)
+    .attr("y", barY)
+    .attr("width", barW)
+    .attr("height", barH)
+    .attr("rx", 3)
+    .attr("ry", 3)
+    .attr("stroke", "#17324a")
+    .attr("stroke-opacity", 0.25)
+    .attr("fill", "url(#lifestyle-urban-ylgnbu-gradient)");
+
+  const axisG = legendSvg
+    .append("g")
+    .attr("transform", `translate(${barX + barW},0)`);
+
+  const urbanAxis = d3
+    .axisRight(legendY)
+    .tickValues([0, 50, 100])
+    .tickFormat(d => `${d}%`)
+    .tickSize(4);
+
+  axisG.call(urbanAxis);
+  axisG.select(".domain").remove();
+  axisG.selectAll(".tick line").attr("stroke", "#444");
+  axisG.selectAll(".tick text").attr("fill", "#111").attr("font-size", 10);
+
+  const urbanLegendPointer = legendSvg
+    .append("line")
+    .attr("stroke", "#111")
+    .attr("stroke-width", 2)
+    .attr("stroke-linecap", "round")
+    .attr("x1", barX + barW)
+    .attr("x2", barX + barW + 14)
+    .attr("y1", legendY(0))
+    .attr("y2", legendY(0))
+    .style("opacity", 0);
+
   // WDI-style CSVs have metadata lines above the real header.
   async function loadWdiLikeCsv(path) {
     const text = await fetch(path).then(r => r.text());
@@ -373,6 +451,15 @@ Promise.all([
             .attr("stroke-width", 2.5)
             .attr("stroke-opacity", 0.95);
 
+          const yy = legendY(d.urban);
+          urbanLegendPointer.interrupt();
+          urbanLegendPointer
+            .style("opacity", 1)
+            .transition()
+            .duration(250)
+            .attr("y1", yy)
+            .attr("y2", yy);
+
           lifestyleTooltip
             .style("opacity", 1)
             .html(`
@@ -383,15 +470,27 @@ Promise.all([
               <div>Total Population: ${fmtCommas(Math.round(d.pop))}</div>
             `);
         })
-        .on("mousemove", function (event) {
+        .on("mousemove", function (event, d) {
           lifestyleTooltip
             .style("left", (event.pageX + 15) + "px")
             .style("top", (event.pageY + 15) + "px");
+
+          const yy = legendY(d.urban);
+          urbanLegendPointer.interrupt();
+          urbanLegendPointer
+            .style("opacity", 1)
+            .transition()
+            .duration(250)
+            .attr("y1", yy)
+            .attr("y2", yy);
         })
         .on("mouseout", function () {
           d3.select(this)
             .attr("stroke-width", 1)
             .attr("stroke-opacity", 0.35);
+
+          urbanLegendPointer.interrupt();
+          urbanLegendPointer.transition().duration(150).style("opacity", 0);
 
           lifestyleTooltip.style("opacity", 0);
         })

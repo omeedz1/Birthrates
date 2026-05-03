@@ -97,8 +97,22 @@ body {
     font-size: 14px;
 }
 
-#lifestyle-chart svg {
+#lifestyle-viz-container {
     margin-top: 10px;
+    justify-content: center;
+}
+
+#lifestyle-legend-container {
+    padding-left: 20px;
+    flex: 0 0 auto;
+}
+
+#lifestyle-chart {
+    flex: 0 0 auto;
+}
+
+#lifestyle-chart svg {
+    margin-top: 0;
     border: 2px solid black;
 }
 
