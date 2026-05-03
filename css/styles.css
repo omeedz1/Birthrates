@@ -86,3 +86,81 @@ body {
     padding-left: 1rem;
     padding-right: 1rem;
 }
+
+
+/* Lifestyle analysis section (independent from map) */
+#lifestyle-analysis {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e5e5;
+}
+
+.lifestyle-controls {
+    margin: 10px 0 12px;
+}
+
+.lifestyle-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.lifestyle-buttons button {
+    padding: 6px 12px;
+    border: 1px solid #bbb;
+    background: #f8f8f8;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 22px;
+    line-height: 1;
+}
+
+.lifestyle-buttons button:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.lifestyle-year-readout {
+    margin-top: 6px;
+    font-size: 14px;
+}
+
+#lifestyle-viz-container {
+    margin-top: 10px;
+    justify-content: center;
+}
+
+#lifestyle-legend-container {
+    padding-left: 20px;
+    flex: 0 0 auto;
+}
+
+#lifestyle-chart {
+    flex: 0 0 auto;
+}
+
+#lifestyle-chart svg {
+    margin-top: 0;
+    border: 2px solid black;
+}
+
+.lifestyle-tooltip {
+    position: absolute;
+    opacity: 0;
+    padding: 10px 12px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18);
+    color: #111;
+    font-family: Arial, sans-serif;
+    font-size: 12.5px;
+    pointer-events: none;
+    line-height: 1.35;
+    z-index: 9999;
+}
+
+.lifestyle-tooltip .title {
+    font-weight: 700;
+    margin-bottom: 6px;
+}
