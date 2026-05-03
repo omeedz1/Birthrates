@@ -271,7 +271,7 @@ Promise.all([
   const legendWrap = d3.select("#lifestyle-legend-container");
   const legendSvg = legendWrap
     .append("svg")
-    .attr("width", 60)
+    .attr("width", 140)
     .attr("height", 250);
 
   legendSvg
