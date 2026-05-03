@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Global Birth Rate Decline</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="css/styles.css">
 </head>
 
@@ -32,12 +33,16 @@
         <div id="lifestyle-analysis">
             <h3>The Modernity Trap: Digital Lifestyle vs. Fertility by Region</h3>
             <div class="lifestyle-controls">
-                <label>
-                    Lifestyle Year:
-                    <input type="range" id="lifestyle-year-slider" min="1990" max="2024" step="1" value="2024">
-                </label>
+                <div class="lifestyle-buttons">
+                    <button id="lifestyle-play" type="button" aria-label="Play" title="Play">
+                        <i class="bi bi-play-fill" aria-hidden="true"></i>
+                    </button>
+                    <button id="lifestyle-restart" type="button" aria-label="Restart" title="Restart">
+                        <i class="bi bi-repeat" aria-hidden="true"></i>
+                    </button>
+                </div>
                 <div class="lifestyle-year-readout">
-                    Currently Selected Lifestyle Year: <span id="lifestyle-year-label">2024</span>
+                    Currently Selected Lifestyle Year: <span id="lifestyle-year-label">2005</span>
                 </div>
             </div>
             <div id="lifestyle-chart"></div>

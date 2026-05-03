@@ -170,8 +170,9 @@ Promise.all([
     "Sub-Saharan Africa"
   ]);
 
-  const lifestyleYearSlider = d3.select("#lifestyle-year-slider");
   const lifestyleYearLabel = d3.select("#lifestyle-year-label");
+  const playBtn = d3.select("#lifestyle-play");
+  const restartBtn = d3.select("#lifestyle-restart");
 
   const chartWrap = d3.select("#lifestyle-chart");
 
@@ -306,6 +307,11 @@ Promise.all([
     xAxisG.call(d3.axisBottom(x).ticks(6));
     yAxisG.call(d3.axisLeft(y).ticks(6));
 
+    const minYear = 2005;
+    const maxYear = 2024;
+    let currentYear = minYear;
+    let timer = null;
+
     function updateLifestyleChart(year) {
       year = +year;
       lifestyleYearLabel.text(year);
@@ -384,10 +390,50 @@ Promise.all([
     // Expose per requirement (and useful for debugging)
     window.updateLifestyleChart = updateLifestyleChart;
 
-    updateLifestyleChart(lifestyleYearSlider.property("value"));
+    function setPlaying(isPlaying) {
+      playBtn.property("disabled", isPlaying);
+      restartBtn.property("disabled", false);
+    }
 
-    lifestyleYearSlider.on("input", function () {
-      updateLifestyleChart(this.value);
-    });
+    function stopTimer() {
+      if (timer) {
+        timer.stop();
+        timer = null;
+      }
+      setPlaying(false);
+    }
+
+    function startPlayback() {
+      if (timer) return;
+
+      if (currentYear > maxYear) currentYear = minYear;
+      setPlaying(true);
+
+      // Advance immediately so "Play" feels responsive.
+      updateLifestyleChart(currentYear);
+
+      timer = d3.interval(() => {
+        if (currentYear >= maxYear) {
+          stopTimer();
+          return;
+        }
+        currentYear += 1;
+        updateLifestyleChart(currentYear);
+      }, 650);
+    }
+
+    function restart() {
+      stopTimer();
+      currentYear = minYear;
+      updateLifestyleChart(currentYear);
+    }
+
+    // Initial state
+    restartBtn.property("disabled", false);
+    setPlaying(false);
+    updateLifestyleChart(currentYear);
+
+    playBtn.on("click", () => startPlayback());
+    restartBtn.on("click", () => restart());
   });
 })();

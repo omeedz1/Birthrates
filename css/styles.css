@@ -70,6 +70,28 @@ body {
     margin: 10px 0 12px;
 }
 
+.lifestyle-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.lifestyle-buttons button {
+    padding: 6px 12px;
+    border: 1px solid #bbb;
+    background: #f8f8f8;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 22px;
+    line-height: 1;
+}
+
+.lifestyle-buttons button:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
 .lifestyle-year-readout {
     margin-top: 6px;
     font-size: 14px;
