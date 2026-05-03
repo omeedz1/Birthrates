@@ -42,11 +42,26 @@ d3.csv("data/data.csv").then(data => {
       .attr("transform", "translate(0," + introInnerHeight + ")")
       .call(d3.axisBottom(x).tickFormat(d3.format("d")));
 
+      introChart.append("text")
+        .attr("x", introInnerWidth / 2)
+        .attr("y", introInnerHeight + introMargin.bottom - 8)
+        .attr("text-anchor", "middle")
+        .style("font-size", "12px")
+        .text("Year");
+
       const y = d3.scaleLinear()
       .domain([d3.min(yearlyTotals, function(d) {return d.avgFertility; }), d3.max(yearlyTotals, function(d) { return d.avgFertility; })])
       .range([ introInnerHeight, 0 ]);
       introChart.append("g")
         .call(d3.axisLeft(y));
+
+      introChart.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -introInnerHeight / 2)
+        .attr("y", -introMargin.left + 15)
+        .attr("text-anchor", "middle")
+        .style("font-size", "12px")
+        .text("Average Fertility Rate");
 
       introChart.append("path")
         .datum(yearlyTotals)
