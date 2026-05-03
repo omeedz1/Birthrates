@@ -61,7 +61,7 @@ d3.csv("data/data.csv").then(data => {
         .attr("y", -introMargin.left + 15)
         .attr("text-anchor", "middle")
         .style("font-size", "12px")
-        .text("Average Fertility Rate");
+        .text("Average Fertility Rate (Births Per Woman)");
 
       introChart.append("path")
         .datum(yearlyTotals)
@@ -87,7 +87,7 @@ d3.csv("data/data.csv").then(data => {
               .style("opacity", 1)
               .html(`
                 <strong>Year:</strong> ${d.year}<br/>
-                <strong>Average fertility:</strong> ${d.avgFertility.toFixed(2)}
+                <strong>Average fertility :</strong> ${d.avgFertility.toFixed(2)} births per woman
               `);
           })
           .on("mousemove", function(event) {

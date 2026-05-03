@@ -93,6 +93,9 @@ body {
     margin-top: 40px;
     padding-top: 20px;
     border-top: 1px solid #e5e5e5;
+    max-width: 960px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .lifestyle-controls {
@@ -127,8 +130,11 @@ body {
 }
 
 #lifestyle-viz-container {
+    display: flex;
+    align-items: flex-start;
     margin-top: 10px;
     justify-content: center;
+    width: 100%;
 }
 
 #lifestyle-legend-container {
@@ -142,7 +148,9 @@ body {
 
 #lifestyle-chart svg {
     margin-top: 0;
-    border: 2px solid black;
+    display: block;
+    max-width: 100%;
+    height: auto;
 }
 
 .lifestyle-tooltip {
