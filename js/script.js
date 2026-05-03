@@ -176,6 +176,15 @@ Promise.all([
 
   const chartWrap = d3.select("#lifestyle-chart");
 
+  const lifestyleTooltip = d3
+    .select("body")
+    .append("div")
+    .attr("class", "lifestyle-tooltip");
+
+  const fmtFertility = d3.format(".2f");
+  const fmtCommas = d3.format(",");
+  const fmtPct = d3.format(".2f");
+
   const margin = { top: 30, right: 30, bottom: 55, left: 70 };
   const chartWidth = 960;
   const chartHeight = 520;
@@ -345,7 +354,7 @@ Promise.all([
 
       const circles = bubblesG.selectAll("circle").data(points, d => d.region);
 
-      circles
+      const merged = circles
         .enter()
         .append("circle")
         .attr("cx", d => x(d.internet))
@@ -356,7 +365,36 @@ Promise.all([
         .attr("stroke", "#17324a")
         .attr("stroke-opacity", 0.35)
         .attr("stroke-width", 1)
-        .merge(circles)
+        .merge(circles);
+
+      merged
+        .on("mouseover", function (event, d) {
+          d3.select(this)
+            .attr("stroke-width", 2.5)
+            .attr("stroke-opacity", 0.95);
+
+          lifestyleTooltip
+            .style("opacity", 1)
+            .html(`
+              <div class="title">${d.region}</div>
+              <div>Fertility: ${fmtFertility(d.fertility)} births per woman</div>
+              <div>Internet: ${fmtPct(d.internet)}% of population</div>
+              <div>Urbanization: ${fmtPct(d.urban)}% urban</div>
+              <div>Total Population: ${fmtCommas(Math.round(d.pop))}</div>
+            `);
+        })
+        .on("mousemove", function (event) {
+          lifestyleTooltip
+            .style("left", (event.pageX + 15) + "px")
+            .style("top", (event.pageY + 15) + "px");
+        })
+        .on("mouseout", function () {
+          d3.select(this)
+            .attr("stroke-width", 1)
+            .attr("stroke-opacity", 0.35);
+
+          lifestyleTooltip.style("opacity", 0);
+        })
         .transition()
         .duration(350)
         .attr("cx", d => x(d.internet))

@@ -101,3 +101,23 @@ body {
     margin-top: 10px;
     border: 2px solid black;
 }
+
+.lifestyle-tooltip {
+    position: absolute;
+    opacity: 0;
+    padding: 10px 12px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18);
+    color: #111;
+    font-family: Arial, sans-serif;
+    font-size: 12.5px;
+    pointer-events: none;
+    line-height: 1.35;
+    z-index: 9999;
+}
+
+.lifestyle-tooltip .title {
+    font-weight: 700;
+    margin-bottom: 6px;
+}
