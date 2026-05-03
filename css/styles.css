@@ -58,3 +58,24 @@ body {
     font-size: 12px;
     transition: opacity 0.2s;
 }
+
+/* Lifestyle analysis section (independent from map) */
+#lifestyle-analysis {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e5e5;
+}
+
+.lifestyle-controls {
+    margin: 10px 0 12px;
+}
+
+.lifestyle-year-readout {
+    margin-top: 6px;
+    font-size: 14px;
+}
+
+#lifestyle-chart svg {
+    margin-top: 10px;
+    border: 2px solid black;
+}
