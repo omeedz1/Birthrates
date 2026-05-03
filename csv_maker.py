@@ -1,29 +1,17 @@
 import pandas as pd
 import pycountry
 
-# -----------------------------
-# FILE PATHS
-# -----------------------------
 FERTILITY_FILE = "data/fertility.csv"
 GDP_FILE = "data/gdp.csv"
 URBAN_FILE = "data/urban.csv"
 EDUCATION_FILE = "data/education.csv"
-
 OUTPUT_FILE = "data/data.csv"
 
-
-# -----------------------------
-# CLEAN ISO + YEAR HELPERS
-# -----------------------------
 def clean_keys(df):
     df["iso3"] = df["iso3"].astype(str).str.strip().str.upper()
     df["year"] = pd.to_numeric(df["year"], errors="coerce")
     return df
 
-
-# -----------------------------
-# WORLD BANK WIDE FORMAT HANDLER
-# -----------------------------
 def reshape_worldbank(file_path, value_name):
     df = pd.read_csv(file_path, skiprows=4)
     df.columns = df.columns.str.strip()
@@ -46,10 +34,6 @@ def reshape_worldbank(file_path, value_name):
 
     return df
 
-
-# -----------------------------
-# EDUCATION CLEANING
-# -----------------------------
 def clean_education(file_path):
     df = pd.read_csv(file_path)
     df.columns = df.columns.str.strip()
@@ -82,19 +66,11 @@ def clean_education(file_path):
 
     return df
 
-
-# -----------------------------
-# LOAD DATASETS
-# -----------------------------
 fertility = reshape_worldbank(FERTILITY_FILE, "fertility")
 gdp = reshape_worldbank(GDP_FILE, "gdp")
 urban = reshape_worldbank(URBAN_FILE, "urban")
 education = clean_education(EDUCATION_FILE)
 
-
-# -----------------------------
-# ALIGN COUNTRIES (optional filter)
-# -----------------------------
 valid_iso3 = {c.alpha_3 for c in pycountry.countries}
 
 def filter_countries(df):
@@ -105,43 +81,21 @@ gdp = filter_countries(gdp)
 urban = filter_countries(urban)
 education = filter_countries(education)
 
-
-# -----------------------------
-# 🔥 FIXED MERGE LOGIC (IMPORTANT CHANGE)
-# -----------------------------
 keys = ["country", "iso3", "year"]
 
 df = fertility.merge(gdp, on=keys, how="outer") \
               .merge(urban, on=keys, how="outer") \
               .merge(education, on=keys, how="outer")
 
-
-# -----------------------------
-# CLEANING (SAFE VERSION)
-# -----------------------------
-
-# keep structure, not completeness
 df = df.dropna(subset=["country", "iso3", "year"])
 
-# optional: ensure year validity
 df = df[df["year"] >= 1990]
 df = df[df["year"] < 2025]
 
-# DO NOT drop NaNs for variables
-# (this is what caused your D3 issue before)
-
-
-# -----------------------------
-# DEBUG OUTPUT
-# -----------------------------
 print("\nFINAL SHAPE:", df.shape)
 print("Countries:", df["country"].nunique())
 print(df.head())
 
-
-# -----------------------------
-# SAVE FOR D3
-# -----------------------------
 df.to_csv(OUTPUT_FILE, index=False)
 
 print(f"\n✅ Saved cleaned dataset → {OUTPUT_FILE}")
