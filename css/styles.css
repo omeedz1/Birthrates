@@ -18,10 +18,15 @@ body {
 /* Layout for visualizations */
 .vis-grid {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: flex-start;
     gap: 40px;
     margin-top: 20px;
+}
+
+.vis-grid > div {
+    width: 100%;
+    max-width: 960px;
 }
 
 /* Visualization containers */
@@ -30,10 +35,24 @@ body {
     flex: 1;
 }
 
+#intro-vis,
+#map {
+    max-width: 960px;
+    margin: 0 auto;
+}
+
 /* SVG spacing */
 #map svg,
-#ternary svg {
+#ternary svg,
+#intro-vis svg {
     margin-top: 20px;
+}
+
+#map svg,
+#intro-vis svg {
+    display: block;
+    width: 100%;
+    height: auto;
 }
 
 /* Section titles */
@@ -58,6 +77,16 @@ body {
     font-size: 12px;
     transition: opacity 0.2s;
 }
+
+#introduction {
+    padding-bottom: 0.5rem;
+    border: 1px solid #d9d9d9;
+    border-radius: 6px;
+    padding-top: 0.75rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
 
 /* Lifestyle analysis section (independent from map) */
 #lifestyle-analysis {

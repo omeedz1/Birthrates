@@ -1,5 +1,106 @@
+
+
 const width = 960;
 const height = 600;
+const introWidth = 960;
+const introHeight = 320;
+const introMargin = { top: 20, right: 20, bottom: 40, left: 50 };
+const introInnerWidth = introWidth - introMargin.left - introMargin.right;
+const introInnerHeight = introHeight - introMargin.top - introMargin.bottom;
+
+const introSvg = d3.select("#intro-vis")
+  .append("svg")
+  .attr("width", introWidth)
+  .attr("height", introHeight)
+  .attr("viewBox", `0 0 ${introWidth} ${introHeight}`)
+  .attr("preserveAspectRatio", "xMidYMid meet");
+
+const introChart = introSvg.append("g")
+  .attr("transform", `translate(${introMargin.left},${introMargin.top})`);
+
+
+d3.csv("data/data.csv").then(data => {
+
+      data.forEach(d => {
+        d.year = +d.year;
+        d.fertility = d.fertility === "" ? null : +d.fertility;
+      });
+
+      const yearlyTotals = Array.from(
+        d3.rollup(
+          data.filter(d => d.fertility != null),
+          values => d3.mean(values, d => d.fertility),
+          d => d.year
+        ),
+        ([year, avgFertility]) => ({ year, avgFertility })
+      ).sort((a, b) => a.year - b.year);
+
+      const x = d3.scaleLinear()
+              .domain(d3.extent(yearlyTotals, d => d.year))
+              .range([0, introInnerWidth]); 
+      introChart.append("g")
+      .attr("transform", "translate(0," + introInnerHeight + ")")
+      .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+
+      introChart.append("text")
+        .attr("x", introInnerWidth / 2)
+        .attr("y", introInnerHeight + introMargin.bottom - 8)
+        .attr("text-anchor", "middle")
+        .style("font-size", "12px")
+        .text("Year");
+
+      const y = d3.scaleLinear()
+      .domain([d3.min(yearlyTotals, function(d) {return d.avgFertility; }), d3.max(yearlyTotals, function(d) { return d.avgFertility; })])
+      .range([ introInnerHeight, 0 ]);
+      introChart.append("g")
+        .call(d3.axisLeft(y));
+
+      introChart.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -introInnerHeight / 2)
+        .attr("y", -introMargin.left + 15)
+        .attr("text-anchor", "middle")
+        .style("font-size", "12px")
+        .text("Average Fertility Rate");
+
+      introChart.append("path")
+        .datum(yearlyTotals)
+        .attr("fill", "none")
+        .attr("stroke", "steelblue")
+
+        .attr("stroke-width", 1.5)
+        .attr("d", d3.line()
+          .x(function(d) { return x(d.year) })
+          .y(function(d) { return y(d.avgFertility) })
+        ); 
+      
+        introChart.selectAll("circle")
+          .data(yearlyTotals)
+          .enter()
+          .append("circle")
+          .attr("cx", d => x(d.year))
+          .attr("cy", d => y(d.avgFertility))
+          .attr("r", 3)
+          .attr("fill", "black")
+          .on("mouseover", function(event, d) {
+            tooltip
+              .style("opacity", 1)
+              .html(`
+                <strong>Year:</strong> ${d.year}<br/>
+                <strong>Average fertility:</strong> ${d.avgFertility.toFixed(2)}
+              `);
+          })
+          .on("mousemove", function(event) {
+            tooltip
+              .style("left", `${event.pageX + 10}px`)
+              .style("top", `${event.pageY + 10}px`);
+          })
+          .on("mouseout", function() {
+            tooltip.style("opacity", 0);
+          });
+              
+      }
+)
 
 //WORLD MAP START
 
@@ -49,7 +150,10 @@ Promise.all([
     .append("svg")
     .attr("width", width)
     .attr("height", height)
-    .style("border", "2px solid black");
+    .attr("viewBox", `0 0 ${width} ${height}`)
+    .attr("preserveAspectRatio", "xMidYMid meet")
+    .style("border", "1px solid black");
+    
 
   const projection = d3.geoNaturalEarth1()
     .scale(160)
