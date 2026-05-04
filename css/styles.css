@@ -119,6 +119,7 @@ body {
     max-width: 960px;
     margin-left: auto;
     margin-right: auto;
+    display: block;
 }
 
 .lifestyle-controls {
@@ -154,10 +155,16 @@ body {
 
 #lifestyle-viz-container {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     margin-top: 10px;
     justify-content: center;
     width: 100%;
+}
+
+#lifestyle-analysis > .lifestyle-notes {
+    display: block;
+    width: 100%;
+    clear: both;
 }
 
 #lifestyle-legend-container {
@@ -176,14 +183,11 @@ body {
     height: auto;
 }
 
-#lifestyle-copy {
-    flex: 0 0 280px;
+.lifestyle-notes {
+    margin: 18px auto 0;
+    max-width: 960px;
     text-align: left;
     color: #334155;
-}
-
-.lifestyle-notes {
-    margin: 0;
 }
 
 .lifestyle-tooltip {
