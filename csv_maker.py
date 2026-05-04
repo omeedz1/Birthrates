@@ -3,8 +3,9 @@ import pycountry
 
 FERTILITY_FILE = "data/fertility.csv"
 GDP_FILE = "data/gdp.csv"
-URBAN_FILE = "data/urban.csv"
+URBAN_FILE = "data/Urban_Data.csv"
 EDUCATION_FILE = "data/education.csv"
+POPULATION_FILE = "data/total_population.csv"
 OUTPUT_FILE = "data/data.csv"
 
 def clean_keys(df):
@@ -70,6 +71,7 @@ fertility = reshape_worldbank(FERTILITY_FILE, "fertility")
 gdp = reshape_worldbank(GDP_FILE, "gdp")
 urban = reshape_worldbank(URBAN_FILE, "urban")
 education = clean_education(EDUCATION_FILE)
+population = reshape_worldbank(POPULATION_FILE, "population")
 
 valid_iso3 = {c.alpha_3 for c in pycountry.countries}
 
@@ -80,12 +82,14 @@ fertility = filter_countries(fertility)
 gdp = filter_countries(gdp)
 urban = filter_countries(urban)
 education = filter_countries(education)
+population = filter_countries(population)
 
 keys = ["country", "iso3", "year"]
 
 df = fertility.merge(gdp, on=keys, how="outer") \
               .merge(urban, on=keys, how="outer") \
-              .merge(education, on=keys, how="outer")
+              .merge(education, on=keys, how="outer") \
+              .merge(population, on=keys, how="outer")
 
 df = df.dropna(subset=["country", "iso3", "year"])
 

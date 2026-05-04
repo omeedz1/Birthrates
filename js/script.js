@@ -102,6 +102,9 @@ d3.csv("data/data.csv").then(data => {
       }
 )
 
+
+
+
 //WORLD MAP START
 
 const fmt = (v, type) => {
@@ -262,6 +265,222 @@ Promise.all([
 //WORLD MAP END
 
 
+(() => {
+  const educationYearLabel = d3.select("#education-year-label");
+  const educationSlider = d3.select("#education-year-slider");
+  const chartWrap = d3.select("#education-chart");
+
+  const educationTooltip = d3
+    .select("body")
+    .append("div")
+    .attr("class", "education-tooltip");
+
+  const fmtEducation = d3.format(".2f");
+  const fmtFertilityRate = d3.format(".2f");
+  const fmtPopulation = d3.format(",");
+
+  const margin = { top: 24, right: 24, bottom: 56, left: 64 };
+  const chartWidth = 960;
+  const chartHeight = 520;
+  const innerWidth = chartWidth - margin.left - margin.right;
+  const innerHeight = chartHeight - margin.top - margin.bottom;
+
+  const svg = chartWrap
+    .append("svg")
+    .attr("width", chartWidth)
+    .attr("height", chartHeight)
+    .attr("viewBox", `0 0 ${chartWidth} ${chartHeight}`)
+    .attr("preserveAspectRatio", "xMidYMid meet");
+
+  const g = svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const xAxisG = g
+    .append("g")
+    .attr("transform", `translate(0,${innerHeight})`);
+
+  const yAxisG = g.append("g");
+
+  xAxisG
+    .append("text")
+    .attr("x", innerWidth / 2)
+    .attr("y", 42)
+    .attr("fill", "#111")
+    .attr("text-anchor", "middle")
+    .attr("font-size", 12)
+    .text("Female tertiary enrollment (% gross)");
+
+  yAxisG
+    .append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("x", -innerHeight / 2)
+    .attr("y", -48)
+    .attr("fill", "#111")
+    .attr("text-anchor", "middle")
+    .attr("font-size", 12)
+    .text("Fertility rate (births per woman)");
+
+  const bubblesG = g.append("g");
+  const correlationLabel = g.append("text")
+    .attr("x", innerWidth)
+    .attr("y", 6)
+    .attr("text-anchor", "end")
+    .attr("fill", "#334155")
+    .attr("font-size", 12)
+    .attr("font-weight", 600);
+
+  d3.csv("data/data.csv").then(data => {
+    data.forEach(d => {
+      d.year = +d.year;
+      d.fertility = d.fertility === "" ? null : +d.fertility;
+      d.education = d.education === "" ? null : +d.education;
+      d.population = d.population === "" ? null : +d.population;
+    });
+
+    const validData = data.filter(
+      d => d.year != null && d.fertility != null && d.education != null && d.population != null
+    );
+
+    const years = Array.from(new Set(validData.map(d => d.year))).sort((a, b) => a - b);
+
+    educationSlider
+      .attr("min", d3.min(years))
+      .attr("max", d3.max(years))
+      .attr("step", 1)
+      .property("value", d3.min(years));
+
+    const x = d3.scaleLinear()
+      .domain([0, d3.max(validData, d => d.education)])
+      .nice()
+      .range([0, innerWidth]);
+
+    const y = d3.scaleLinear()
+      .domain([0, d3.max(validData, d => d.fertility)])
+      .nice()
+      .range([innerHeight, 0]);
+
+    const size = d3.scaleSqrt()
+      .domain(d3.extent(validData, d => d.population))
+      .range([3, 20]);
+
+    xAxisG.call(d3.axisBottom(x).ticks(6));
+    yAxisG.call(d3.axisLeft(y).ticks(6));
+
+    g.append("g")
+      .attr("stroke", "#eef3f7")
+      .attr("stroke-opacity", 0.55)
+      .attr("stroke-width", 0.7)
+      .call(d3.axisLeft(y).tickSize(-innerWidth).tickFormat("").ticks(6))
+      .call(g => g.select(".domain").remove());
+
+    g.append("g")
+      .attr("transform", `translate(0,${innerHeight})`)
+      .attr("stroke", "#eef3f7")
+      .attr("stroke-opacity", 0.55)
+      .attr("stroke-width", 0.7)
+      .call(d3.axisBottom(x).tickSize(-innerHeight).tickFormat("").ticks(6))
+      .call(g => g.select(".domain").remove());
+
+    function pearsonCorrelation(values) {
+      if (values.length < 2) return null;
+
+      const meanX = d3.mean(values, d => d.education);
+      const meanY = d3.mean(values, d => d.fertility);
+
+      let numerator = 0;
+      let sumSqX = 0;
+      let sumSqY = 0;
+
+      values.forEach(d => {
+        const dx = d.education - meanX;
+        const dy = d.fertility - meanY;
+        numerator += dx * dy;
+        sumSqX += dx * dx;
+        sumSqY += dy * dy;
+      });
+
+      const denominator = Math.sqrt(sumSqX * sumSqY);
+      return denominator ? numerator / denominator : null;
+    }
+
+    function updateEducationChart(year) {
+      year = +year;
+      educationYearLabel.text(year);
+
+      const yearData = validData
+        .filter(d => d.year === year)
+        .sort((a, b) => b.population - a.population);
+
+      const correlation = pearsonCorrelation(yearData);
+      correlationLabel.text(
+        correlation == null
+          ? "Correlation: N/A"
+          : `Correlation (r): ${d3.format(".2f")(correlation)}`
+      );
+
+      const bubbles = bubblesG.selectAll("circle")
+        .data(yearData, d => d.iso3);
+
+      bubbles.exit()
+        .transition()
+        .duration(200)
+        .attr("r", 0)
+        .remove();
+
+      const bubblesEnter = bubbles.enter()
+        .append("circle")
+        .attr("cx", d => x(d.education))
+        .attr("cy", d => y(d.fertility))
+        .attr("r", 0)
+        .attr("fill", "#3b82b7")
+        .attr("fill-opacity", 0.55)
+        .attr("stroke", "#1f4f73")
+        .attr("stroke-width", 0.8)
+        .on("mouseover", function(event, d) {
+          d3.select(this)
+            .attr("stroke-width", 1.4)
+            .attr("fill-opacity", 0.75);
+
+          educationTooltip
+            .style("opacity", 1)
+            .html(`
+              <strong>${d.country}</strong><br/>
+              Education: ${fmtEducation(d.education)}% gross<br/>
+              Fertility: ${fmtFertilityRate(d.fertility)} births per woman<br/>
+              Population: ${fmtPopulation(d.population)}
+            `);
+        })
+        .on("mousemove", function(event) {
+          educationTooltip
+            .style("left", `${event.pageX + 10}px`)
+            .style("top", `${event.pageY + 10}px`);
+        })
+        .on("mouseout", function() {
+          d3.select(this)
+            .attr("stroke-width", 0.8)
+            .attr("fill-opacity", 0.55);
+
+          educationTooltip.style("opacity", 0);
+        });
+
+      bubblesEnter.merge(bubbles)
+        .transition()
+        .duration(350)
+        .attr("cx", d => x(d.education))
+        .attr("cy", d => y(d.fertility))
+        .attr("r", d => size(d.population));
+    }
+
+    updateEducationChart(educationSlider.property("value"));
+
+    educationSlider.on("input", function() {
+      updateEducationChart(this.value);
+    });
+  });
+})();
+
+
 // LIFESTYLE ANALYSIS (independent from map)
 (() => {
   const lifestyleRegions = new Set([
@@ -405,7 +624,7 @@ Promise.all([
     .attr("y2", "0");
 
   for (let pct = 0; pct <= 100; pct += 1) {
-    const t = 1 - pct / 100;
+    const t = pct / 100;
     urbanGradient
       .append("stop")
       .attr("offset", `${pct}%`)
