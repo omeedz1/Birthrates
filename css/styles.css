@@ -41,6 +41,29 @@ body {
     margin: 0 auto;
 }
 
+#intro-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    width: 100%;
+}
+
+#intro-vis {
+    flex: 0 1 auto;
+    margin: 0;
+}
+
+#intro-copy {
+    flex: 0 0 260px;
+    text-align: left;
+    color: #334155;
+}
+
+#intro-copy p {
+    margin: 0;
+}
+
 /* SVG spacing */
 #map svg,
 #ternary svg,
@@ -171,4 +194,67 @@ body {
 .lifestyle-tooltip .title {
     font-weight: 700;
     margin-bottom: 6px;
+}
+
+#education-analysis {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e5e5;
+    max-width: 960px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.education-controls {
+    margin: 10px 0 12px;
+}
+
+#education-chart {
+    max-width: 960px;
+    margin: 0 auto;
+}
+
+#education-viz-container {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 24px;
+    width: 100%;
+}
+
+#education-chart {
+    flex: 0 1 auto;
+    margin: 0;
+}
+
+#education-chart svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+#education-notes {
+    flex: 0 0 240px;
+    text-align: left;
+    font-size: 14px;
+    color: #334155;
+}
+
+#education-notes p {
+    margin-top: 0;
+}
+
+.education-tooltip {
+    position: absolute;
+    opacity: 0;
+    padding: 10px 12px;
+    background: #fff;
+    border: 1px solid #d7d7d7;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.14);
+    color: #111;
+    font-size: 12.5px;
+    pointer-events: none;
+    line-height: 1.35;
+    z-index: 9999;
 }

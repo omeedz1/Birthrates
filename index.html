@@ -16,7 +16,15 @@
         <div id="introduction">
             <h3>Since 1990, Average Global Fertility Has Fallen Every Year</h3>
             <div id="intro-tooltip" style="display:none"></div> 
-            <div id="intro-vis"></div>
+            <div id="intro-content">
+                <div id="intro-vis"></div>
+                <div id="intro-copy">
+                    <p>Around the world, birth rates are falling—and the reasons are more complex than a single cause. 
+                        As education levels rise, economies shift, cities grow, and the costs of raising children increase, many people are choosing to have fewer children or to delay parenthood. 
+                        This trend is shaped by a wide range of social, economic, cultural, and personal factors that influence how people think about family life. 
+                        This visualization explores the many forces behind declining birth rates and how they vary across countries, regions, and generations.</p>
+                </div>
+            </div>
         </div>
 
         <h3> What is contributing to this decine </h3>
@@ -54,6 +62,28 @@
             <div id="lifestyle-viz-container">
                 <div id="lifestyle-chart"></div>
                 <div id="lifestyle-legend-container"></div>
+            </div>
+        </div>
+
+        <div id="education-analysis">
+            <h3>Fertility Appears Broad-Based <i>Across</i> Education Levels</h3>
+            <div class="education-controls">
+                <label>
+                    Year:
+                    <input type="range" id="education-year-slider" step="1">
+                    <span id="education-year-label"></span>
+                </label>
+            </div>
+            <div id="education-viz-container">
+                <div id="education-chart"></div>
+                <div id="education-notes">
+                    <p>
+                        Although it is true that countries with higher levels of tertiary education tend to have lower fertility rates, the relationship is not as straightforward as it may seem. 
+                        When we look at fertility rates across different education levels within countries, we find that the decline in birth rates is occurring broadly across all education groups, not just among those with higher education. 
+                        This suggests that while education may play a role in fertility decisions, it is not the sole or even the primary driver of the global fertility decline. 
+                    
+                    </p>
+                </div>
             </div>
         </div>
 
