@@ -17,9 +17,13 @@
             <h3>Since 1990, Average Global Fertility Has Fallen Every Year</h3>
             <div id="intro-tooltip" style="display:none"></div> 
             <div id="intro-vis"></div>
+
+            <p>Around the world, birth rates are falling—and the reasons are more complex than a single cause. 
+                As education levels rise, economies shift, cities grow, and the costs of raising children increase, many people are choosing to have fewer children or to delay parenthood. 
+                This trend is shaped by a wide range of social, economic, cultural, and personal factors that influence how people think about family life. 
+                This visualization explores the many forces behind declining birth rates and how they vary across countries, regions, and generations.</p>
         </div>
 
-        <h3> What is contributing to this decine </h3>
 
         <div id="controls">
             <label>
@@ -81,6 +85,18 @@
                 <div id="lifestyle-chart"></div>
                 <div id="lifestyle-legend-container"></div>
             </div>
+        </div>
+
+        <div id="education-analysis">
+            <h3>Education and Fertility by Country</h3>
+            <div class="education-controls">
+                <label>
+                    Year:
+                    <input type="range" id="education-year-slider" step="1">
+                    <span id="education-year-label"></span>
+                </label>
+            </div>
+            <div id="education-chart"></div>
         </div>
 
         <div id="tooltip"></div>
