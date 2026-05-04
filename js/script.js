@@ -509,8 +509,8 @@ Promise.all([
   const fmtPct = d3.format(".2f");
 
   const margin = { top: 30, right: 30, bottom: 55, left: 70 };
-  const chartWidth = 960;
-  const chartHeight = 520;
+  const chartWidth = 820;
+  const chartHeight = 460;
   const innerWidth = chartWidth - margin.left - margin.right;
   const innerHeight = chartHeight - margin.top - margin.bottom;
 
