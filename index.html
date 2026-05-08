@@ -15,19 +15,18 @@
 
         <div id="introduction">
             <h3>Since 1990, Average Global Fertility Has Fallen Every Year</h3>
-            <div id="intro-tooltip" style="display:none"></div> 
-            <div id="intro-content">
-                <div id="intro-vis"></div>
-                <div id="intro-copy">
-                    <p>Around the world, birth rates are falling—and the reasons are more complex than a single cause. 
+            <p>Around the world, birth rates are falling—and the reasons are more complex than a single cause. 
                         As education levels rise, economies shift, cities grow, and the costs of raising children increase, many people are choosing to have fewer children or to delay parenthood. 
                         This trend is shaped by a wide range of social, economic, cultural, and personal factors that influence how people think about family life. 
                         This visualization explores the many forces behind declining birth rates and how they vary across countries, regions, and generations.</p>
-                </div>
+            <div id="intro-tooltip" style="display:none"></div> 
+            <div id="intro-content">
+                <div id="intro-vis"></div>
+               
             </div>
         </div>
 
-
+        <!--
         <div id="controls">
             <label>
                 Year:
@@ -35,16 +34,17 @@
                 <span id="yearLabel"></span>
               </label>
         </div>
-
+         
         <div class="vis-grid">
             <div>
                 <h3>World Map</h3>
                 <div id="map"></div>
             </div>
         </div>
+        -->
 
         <div id="education-analysis">
-            <h3>Fertility Appears Broad-Based <i>Across</i> Education Levels</h3>
+            <h3>Fertility Decline Appears Broad-Based <i>Across</i> Education Levels</h3>
             <div class="education-controls">
                 <label>
                     Year:
@@ -52,36 +52,37 @@
                     <span id="education-year-label"></span>
                 </label>
             </div>
-            <div id="education-viz-container">
+            
                 <div id="education-chart"></div>
-                <div id="education-notes">
-                    <p>
-                        Although it is true that countries with higher levels of tertiary education tend to have lower fertility rates, <b>the relationship is not as straightforward as it may seem.</b> 
-                        When we look at fertility rates across different education levels within countries, we find that the decline in birth rates is occurring broadly across all education groups, not just among those with higher education. 
-                        This suggests that while education may play a role in fertility decisions, it is not the sole or even the primary driver of the global fertility decline. 
+                <p>
+                    Although it is true that countries with higher levels of tertiary education tend to have lower fertility rates, <b>the relationship is not as straightforward as it may seem.</b> 
+                    When we look at fertility rates across different education levels within countries, we find that the decline in birth rates is occurring broadly across all education groups, not just among those with higher education. 
+                    This suggests that while education may play a role in fertility decisions, it is not the sole or even the primary driver of the global fertility decline. 
+                
+                </p>
+                
                     
-                    </p>
-                </div>
-            </div>
+                
+        </div>
 
         <div id="lifestyle-analysis">
-            <h2>The Modernity Trap: Digital Lifestyle vs. Fertility by Region</h3>
+            <h3>The Modernity Trap: Digital Lifestyle vs. Fertility by Region</h3>
             <div class="viz-guide">
-                <h3>Data Exploration Guide</h3>
-                <p>
-                    Use the <b>Play</b> and <b>Restart</b> buttons to track how the digital landscape has transformed global demographics over time. The <b>Year Readout</b> indicates the current data snapshot.
-                </p>
-            
-                <div class="legend-grid">
-                    <div class="legend-item"><b>X-Axis:</b> Digital Lifestyle</div>
-                    <div class="legend-item"><b>Y-Axis:</b> Birth Rate</div>
-                    <div class="legend-item"><b>Size:</b> Population</div>
-                    <div class="legend-item"><b>Color:</b> Urbanization Rate</div>
+               
+                <div class="guide-summary">
+                    <p>
+                        Use the <b>Play</b> and <b>Restart</b> buttons to track how the digital landscape has transformed global demographics over time. The <b>Year Readout</b> indicates the current data snapshot. Hover over bubbles for detailed stats. Faded dotted lines indicate the <b>Global Average</b> for the selected year.
+                    </p>
+                
+                    <div class="legend-grid">
+                        <div class="legend-item"><b>X-Axis:</b> Digital Lifestyle</div>
+                        <div class="legend-item"><b>Y-Axis:</b> Birth Rate</div>
+                        <div class="legend-item"><b>Size:</b> Population</div>
+                        <div class="legend-item"><b>Color:</b> Urbanization Rate</div>
+                    </div>
                 </div>
             
-                <p class="controls-hint">
-                    💡 <b>Pro Tip:</b> Hover over bubbles for detailed stats. Faded dotted lines indicate the <b>Global Average</b> for the selected year.
-                </p>
+            
             </div>
             
             <div class="lifestyle-controls">

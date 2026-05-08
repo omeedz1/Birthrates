@@ -1,11 +1,44 @@
 /* Global styles */
+
+@font-face {
+  font-family: 'nyt-imperial';
+  src: url('../fonts/imperial/imperial-normal-500.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'nyt-imperial';
+  src: url('../fonts/imperial/imperial-normal-600.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'nyt-imperial';
+  src: url('../fonts/imperial/imperial-normal-700.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+
 * {
-    font-family: Arial, sans-serif;
+    font-family: "nyt-imperial", "times new roman", times, serif;
     line-height: 1.6;
+}
+
+h1, h2, h3 {
+    font-weight: 700;
+    margin-top: 0;
 }
 
 body {
     margin: 0;
+}
+
+p {
+    font-size: 18px;
+    font-weight: 500;
+    margin: 2rem; 
 }
 
 /* Main container */
@@ -54,15 +87,6 @@ body {
     margin: 0;
 }
 
-#intro-copy {
-    flex: 0 0 260px;
-    text-align: left;
-    color: #334155;
-}
-
-#intro-copy p {
-    margin: 0;
-}
 
 /* SVG spacing */
 #map svg,
@@ -153,6 +177,36 @@ body {
     font-size: 14px;
 }
 
+.guide-summary {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 24px;
+    text-align: center;
+    margin: 2rem; 
+}
+
+.guide-summary p {
+    flex: 1 1 55%;
+    margin-top: 0;
+}
+
+.legend-grid {
+    flex: 0 0 300px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 14px;
+}
+
+.legend-item {
+    font-size: 14px;
+    line-height: 1.35;
+}
+
+.controls-hint {
+    text-align: center;
+}
+
 #lifestyle-viz-container {
     display: flex;
     align-items: flex-start;
@@ -208,6 +262,18 @@ body {
 .lifestyle-tooltip .title {
     font-weight: 700;
     margin-bottom: 6px;
+}
+
+@media (max-width: 760px) {
+    .guide-summary {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .legend-grid {
+        flex-basis: auto;
+        width: 100%;
+    }
 }
 
 #education-analysis {
@@ -272,3 +338,4 @@ body {
     line-height: 1.35;
     z-index: 9999;
 }
+

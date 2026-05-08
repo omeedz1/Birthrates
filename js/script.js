@@ -324,13 +324,108 @@ Promise.all([
   const bubblesG = g.append("g");
   const correlationLabel = g.append("text")
     .attr("x", innerWidth)
-    .attr("y", 6)
+    .attr("y", 10)
     .attr("text-anchor", "end")
     .attr("fill", "#334155")
     .attr("font-size", 12)
     .attr("font-weight", 600);
 
-  d3.csv("data/data.csv").then(data => {
+  const incomeLevels = [
+    { code: "L", label: "Low income", shortLabel: "Low", color: "#7c3aed" },
+    { code: "LM", label: "Lower-middle income", shortLabel: "Lower-mid", color: "#0f766e" },
+    { code: "UM", label: "Upper-middle income", shortLabel: "Upper-mid", color: "#d97706" },
+    { code: "H", label: "High income", shortLabel: "High", color: "#dc2626" },
+    { code: null, label: "No classification", shortLabel: "N/A", color: "#94a3b8" }
+  ];
+
+  function getIncomeLevel(code) {
+    return incomeLevels.find(level => level.code === code) || incomeLevels[incomeLevels.length - 1];
+  }
+
+  function parseIncomeClassifications(text) {
+    const rows = d3.csvParseRows(text);
+    const yearRow = rows.find(row => row[1] === "Data for calendar year :");
+    const classifications = new Map();
+
+    if (!yearRow) {
+      return classifications;
+    }
+
+    rows.forEach(row => {
+      const iso3 = row[0];
+
+      if (!iso3 || iso3.length !== 3) {
+        return;
+      }
+
+      yearRow.forEach((yearValue, index) => {
+        const year = +yearValue;
+        const code = row[index];
+
+        if (Number.isFinite(year) && ["L", "LM", "UM", "H"].includes(code)) {
+          classifications.set(`${iso3}-${year}`, code);
+        }
+      });
+    });
+
+    return classifications;
+  }
+
+  const legend = g.append("g")
+    .attr("transform", `translate(${innerWidth - 820}, 10)`);
+
+  legend.append("text")
+    .attr("x", 0)
+    .attr("y", 4)
+    .attr("fill", "#334155")
+    .attr("font-size", 11)
+    .attr("font-weight", 700)
+    .text("Income level");
+
+  const legendItems = legend.selectAll("g")
+    .data(incomeLevels)
+    .enter()
+    .append("g")
+    .attr("transform", (d, i) => `translate(${84 + i * 76}, 0)`);
+
+  legendItems.append("circle")
+    .attr("cx", 5)
+    .attr("cy", 0)
+    .attr("r", 4)
+    .attr("fill", d => d.color)
+    .attr("fill-opacity", 0.7);
+
+  legendItems.append("text")
+    .attr("x", 13)
+    .attr("y", 4)
+    .attr("fill", "#334155")
+    .attr("font-size", 10)
+    .text(d => d.shortLabel);
+
+  const sizeLegend = legend.append("g")
+    .attr("transform", "translate(470, 0)");
+
+  sizeLegend.append("circle")
+    .attr("cx", 5)
+    .attr("cy", 0)
+    .attr("r", 7)
+    .attr("fill", "none")
+    .attr("stroke", "#334155")
+    .attr("stroke-width", 1);
+
+  sizeLegend.append("text")
+    .attr("x", 18)
+    .attr("y", 4)
+    .attr("fill", "#334155")
+    .attr("font-size", 10)
+    .text("Size = population");
+
+  Promise.all([
+    d3.csv("data/data.csv"),
+    d3.text("data/income_classifications.csv")
+  ]).then(([data, incomeText]) => {
+    const incomeClassifications = parseIncomeClassifications(incomeText);
+
     data.forEach(d => {
       d.year = +d.year;
       d.fertility = d.fertility === "" ? null : +d.fertility;
@@ -368,19 +463,25 @@ Promise.all([
     yAxisG.call(d3.axisLeft(y).ticks(6));
 
     g.append("g")
+      .attr("class", "grid-lines")
       .attr("stroke", "#eef3f7")
-      .attr("stroke-opacity", 0.55)
+      .attr("stroke-opacity", 0.35)
       .attr("stroke-width", 0.7)
+      .attr("pointer-events", "none")
       .call(d3.axisLeft(y).tickSize(-innerWidth).tickFormat("").ticks(6))
-      .call(g => g.select(".domain").remove());
+      .call(g => g.select(".domain").remove())
+      .lower();
 
     g.append("g")
+      .attr("class", "grid-lines")
       .attr("transform", `translate(0,${innerHeight})`)
       .attr("stroke", "#eef3f7")
-      .attr("stroke-opacity", 0.55)
+      .attr("stroke-opacity", 0.35)
       .attr("stroke-width", 0.7)
+      .attr("pointer-events", "none")
       .call(d3.axisBottom(x).tickSize(-innerHeight).tickFormat("").ticks(6))
-      .call(g => g.select(".domain").remove());
+      .call(g => g.select(".domain").remove())
+      .lower();
 
     function pearsonCorrelation(values) {
       if (values.length < 2) return null;
@@ -410,6 +511,10 @@ Promise.all([
 
       const yearData = validData
         .filter(d => d.year === year)
+        .map(d => ({
+          ...d,
+          incomeCode: incomeClassifications.get(`${d.iso3}-${year}`) || null
+        }))
         .sort((a, b) => b.population - a.population);
 
       const correlation = pearsonCorrelation(yearData);
@@ -433,14 +538,16 @@ Promise.all([
         .attr("cx", d => x(d.education))
         .attr("cy", d => y(d.fertility))
         .attr("r", 0)
-        .attr("fill", "#3b82b7")
-        .attr("fill-opacity", 0.55)
-        .attr("stroke", "#1f4f73")
+        .attr("fill", d => getIncomeLevel(d.incomeCode).color)
+        .attr("fill-opacity", 0.75)
+        .attr("stroke", "#1f2937")
         .attr("stroke-width", 0.8)
         .on("mouseover", function(event, d) {
+          const incomeLevel = getIncomeLevel(d.incomeCode);
+
           d3.select(this)
             .attr("stroke-width", 1.4)
-            .attr("fill-opacity", 0.75);
+            .attr("fill-opacity", 0.9);
 
           educationTooltip
             .style("opacity", 1)
@@ -448,7 +555,8 @@ Promise.all([
               <strong>${d.country}</strong><br/>
               Education: ${fmtEducation(d.education)}% gross<br/>
               Fertility: ${fmtFertilityRate(d.fertility)} births per woman<br/>
-              Population: ${fmtPopulation(d.population)}
+              Population: ${fmtPopulation(d.population)}<br/>
+              Income level: ${incomeLevel.label}
             `);
         })
         .on("mousemove", function(event) {
@@ -459,7 +567,7 @@ Promise.all([
         .on("mouseout", function() {
           d3.select(this)
             .attr("stroke-width", 0.8)
-            .attr("fill-opacity", 0.55);
+            .attr("fill-opacity", 0.75);
 
           educationTooltip.style("opacity", 0);
         });
@@ -469,6 +577,7 @@ Promise.all([
         .duration(350)
         .attr("cx", d => x(d.education))
         .attr("cy", d => y(d.fertility))
+        .attr("fill", d => getIncomeLevel(d.incomeCode).color)
         .attr("r", d => size(d.population));
     }
 
