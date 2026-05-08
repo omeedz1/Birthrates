@@ -41,10 +41,32 @@ Promise.all([
   const dataByIsoYear = d3.group(validData, d => d.iso3, d => d.year);
   const years = Array.from(new Set(validData.map(d => d.year))).sort((a, b) => a - b);
   const fertilityExtent = d3.extent(validData, d => d.fertility);
+  const baselineYear = 1990;
 
   const colorScale = d3.scaleSequential()
     .domain(fertilityExtent)
-    .interpolator(d3.interpolateYlOrRd);
+    .interpolator(d3.interpolateBlues);
+
+  const latestYear = d3.max(years);
+  const countryChanges = world.features.map(feature => {
+    const iso = (feature.id || "").toString().trim().toUpperCase();
+    const baseline = dataByIsoYear.get(iso)?.get(baselineYear)?.[0]?.fertility;
+    const latest = dataByIsoYear.get(iso)?.get(latestYear)?.[0]?.fertility;
+
+    return {
+      feature,
+      iso,
+      name: feature.properties.name,
+      centroid: d3.geoCentroid(feature),
+      baseline,
+      latest,
+      maxAbsChange: baseline == null || latest == null ? null : Math.abs(latest - baseline)
+    };
+  });
+
+  const changeLengthScale = d3.scaleSqrt()
+    .domain([0, d3.max(countryChanges, d => d.maxAbsChange) || 1])
+    .range([7, 38]);
 
   const baseGlobeScale = 220;
   const projection = d3.geoOrthographic()
@@ -58,6 +80,7 @@ Promise.all([
 
   const mapG = introSvg.append("g");
   const graticule = d3.geoGraticule10();
+  const defs = introSvg.append("defs");
 
   const sphere = mapG.append("path")
     .datum({ type: "Sphere" })
@@ -83,17 +106,33 @@ Promise.all([
     .attr("stroke-width", 0.45)
     .attr("fill", "#d8dee6");
 
+  const changeMarkers = mapG.append("g")
+    .attr("class", "intro-change-markers")
+    .attr("pointer-events", "none")
+    .selectAll("g")
+    .data(countryChanges)
+    .enter()
+    .append("g")
+    .attr("opacity", 0);
+
+  changeMarkers.append("line")
+    .attr("stroke-width", 2.6)
+    .attr("stroke-linecap", "round");
+
+  changeMarkers.append("path")
+    .attr("class", "intro-change-arrowhead");
+
   function redrawIntroGlobe() {
     sphere.attr("d", path);
     graticulePath.attr("d", path);
     countries.attr("d", path);
+    updateChangeMarkers(changeMarkers, currentIntroYear);
   }
 
   const legendWidth = 210;
   const legendHeight = 10;
   const legendX = introWidth - legendWidth - 28;
   const legendY = 28;
-  const defs = introSvg.append("defs");
   const gradient = defs.append("linearGradient")
     .attr("id", "intro-fertility-gradient")
     .attr("x1", "0%")
@@ -138,14 +177,125 @@ Promise.all([
     .attr("text-anchor", "end")
     .text(d3.format(".1f")(fertilityExtent[1]));
 
+  const changeLegend = introSvg.append("g")
+    .attr("transform", `translate(28,${legendY})`);
+
+  changeLegend.append("text")
+    .attr("x", 0)
+    .attr("y", -8)
+    .attr("fill", "#334155")
+    .attr("font-size", 11)
+    .attr("font-weight", 700)
+    .text("Change since 1990");
+
+  [
+    { label: "Increase", color: "#15803d", y1: 20, y2: 2, head: "M6,0L0,12L12,12Z" },
+    { label: "Decrease", color: "#dc2626", y1: 2, y2: 20, head: "M6,22L0,10L12,10Z" }
+  ].forEach((item, index) => {
+    const itemG = changeLegend.append("g")
+      .attr("transform", `translate(${index * 86},0)`);
+
+    itemG.append("line")
+      .attr("x1", 6)
+      .attr("y1", item.y1)
+      .attr("x2", 6)
+      .attr("y2", item.y2)
+      .attr("stroke", item.color)
+      .attr("stroke-width", 2)
+      .attr("stroke-linecap", "round");
+
+    itemG.append("path")
+      .attr("d", item.head)
+      .attr("fill", item.color);
+
+    itemG.append("text")
+      .attr("x", 16)
+      .attr("y", 15)
+      .attr("fill", "#334155")
+      .attr("font-size", 10)
+      .text(item.label);
+  });
+
   const introSlider = d3.select("#intro-year-slider")
     .attr("min", d3.min(years))
     .attr("max", d3.max(years))
     .attr("step", 1)
-    .property("value", d3.min(years));
+    .property("value", d3.max(years));
 
   const introYearLabel = d3.select("#intro-year-label");
   let currentIntroYear = +introSlider.property("value");
+
+  function isPointVisible(coordinates) {
+    const rotate = projection.rotate();
+    const center = [-rotate[0], -rotate[1]];
+
+    return d3.geoDistance(coordinates, center) < Math.PI / 2;
+  }
+
+  function getFertilityChange(d, year) {
+    const row = dataByIsoYear.get(d.iso)?.get(year)?.[0];
+
+    return row?.fertility == null || d.baseline == null ? null : row.fertility - d.baseline;
+  }
+
+  function getChangeMarkerState(d, year) {
+    const change = getFertilityChange(d, year);
+    const point = projection(d.centroid);
+    const visible = change != null && Math.abs(change) >= 0.02 && point && isPointVisible(d.centroid);
+    const length = change == null ? 0 : changeLengthScale(Math.abs(change));
+
+    return {
+      change,
+      color: change > 0 ? "#15803d" : "#dc2626",
+      direction: change > 0 ? "up" : "down",
+      length,
+      point,
+      visible
+    };
+  }
+
+  function updateChangeMarkers(target, year) {
+    target
+      .attr("transform", d => {
+        const state = getChangeMarkerState(d, year);
+
+        return state.point ? `translate(${state.point[0]},${state.point[1]})` : "translate(0,0)";
+      })
+      .attr("opacity", d => {
+        const state = getChangeMarkerState(d, year);
+
+        return state.visible ? 0.9 : 0;
+      });
+
+    target.select("line")
+      .attr("y1", d => {
+        const state = getChangeMarkerState(d, year);
+
+        return state.direction === "up" ? state.length / 2 : -state.length / 2;
+      })
+      .attr("y2", d => {
+        const state = getChangeMarkerState(d, year);
+
+        return state.direction === "up" ? -state.length / 2 + 6 : state.length / 2 - 6;
+      })
+      .attr("stroke", d => getChangeMarkerState(d, year).color);
+
+    target.select("path.intro-change-arrowhead")
+      .attr("d", d => {
+        const state = getChangeMarkerState(d, year);
+
+        return state.direction === "up"
+          ? "M0,-4L-6,8L6,8Z"
+          : "M0,4L-6,-8L6,-8Z";
+      })
+      .attr("transform", d => {
+        const state = getChangeMarkerState(d, year);
+        const y = state.direction === "up" ? -state.length / 2 : state.length / 2;
+
+        return `translate(0,${y})`;
+      })
+      .attr("fill", d => getChangeMarkerState(d, year).color);
+  }
 
   function updateIntroMap(year) {
     year = +year;
@@ -160,6 +310,8 @@ Promise.all([
 
         return row?.fertility != null ? colorScale(row.fertility) : "#d8dee6";
       });
+
+    updateChangeMarkers(changeMarkers.transition().duration(250), year);
   }
 
   let dragStartRotation;
