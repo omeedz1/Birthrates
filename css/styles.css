@@ -21,6 +21,62 @@
   font-style: normal;
 }
 
+@font-face {
+  font-family: 'nyt-franklin';
+  src: url('../fonts/franklin/franklin-normal-300.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'nyt-franklin';
+  src: url('../fonts/franklin/franklin-normal-500.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'nyt-franklin';
+  src: url('../fonts/franklin/franklin-normal-600.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'nyt-franklin';
+  src: url('../fonts/franklin/franklin-normal-900.ttf') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'nyt-franklin';
+  src: url('../fonts/franklin/franklin-italic-300.ttf') format('truetype');
+  font-weight: 300;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'nyt-franklin';
+  src: url('../fonts/franklin/franklin-italic-500.ttf') format('truetype');
+  font-weight: 500;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'nyt-franklin';
+  src: url('../fonts/franklin/franklin-italic-600.ttf') format('truetype');
+  font-weight: 600;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'nyt-franklin';
+  src: url('../fonts/franklin/franklin-italic-900.ttf') format('truetype');
+  font-weight: 900;
+  font-style: italic;
+}
+
 * {
     font-family: "nyt-imperial", "times new roman", times, serif;
     line-height: 1.6;
@@ -31,6 +87,10 @@ h1, h2, h3 {
     margin-top: 0;
 }
 
+h2 {
+    margin: 2rem; 
+}
+
 body {
     margin: 0;
 }
@@ -39,6 +99,11 @@ p {
     font-size: 18px;
     font-weight: 500;
     margin: 2rem; 
+}
+
+#author-names {
+    font-family: "nyt-franklin", Arial, sans-serif;
+    font-weight: 600; 
 }
 
 /* Main container */
@@ -87,12 +152,39 @@ p {
     margin: 0;
 }
 
+.intro-map-controls {
+    margin-top: 8px;
+    font-family: "nyt-franklin", Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.intro-map-help {
+    display: inline-block;
+    margin-left: 16px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.intro-map-controls input {
+    vertical-align: middle;
+}
+
+#intro-vis svg {
+    cursor: grab;
+}
+
+#intro-vis svg:active {
+    cursor: grabbing;
+}
+
 
 /* SVG spacing */
 #map svg,
 #ternary svg,
 #intro-vis svg {
-    margin-top: 20px;
+    margin-top: 12px;
 }
 
 #map svg,
@@ -144,6 +236,7 @@ p {
     margin-left: auto;
     margin-right: auto;
     display: block;
+    text-align: center;
 }
 
 .lifestyle-controls {
@@ -240,7 +333,7 @@ p {
 .lifestyle-notes {
     margin: 18px auto 0;
     max-width: 960px;
-    text-align: left;
+    text-align: center;
     color: #334155;
 }
 
@@ -275,6 +368,8 @@ p {
         width: 100%;
     }
 }
+
+
 
 #education-analysis {
     margin-top: 40px;
@@ -338,4 +433,3 @@ p {
     line-height: 1.35;
     z-index: 9999;
 }
-
