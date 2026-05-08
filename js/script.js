@@ -3,104 +3,238 @@
 const width = 960;
 const height = 600;
 const introWidth = 960;
-const introHeight = 320;
-const introMargin = { top: 20, right: 20, bottom: 40, left: 50 };
-const introInnerWidth = introWidth - introMargin.left - introMargin.right;
-const introInnerHeight = introHeight - introMargin.top - introMargin.bottom;
+const introHeight = 520;
 
-const introSvg = d3.select("#intro-vis")
+const introWrap = d3.select("#intro-vis");
+
+const introControls = introWrap
+  .append("div")
+  .attr("class", "intro-map-controls");
+
+introControls
+  .append("label")
+  .html('Year: <input type="range" id="intro-year-slider" step="1"> <span id="intro-year-label"></span>');
+
+introControls
+  .append("span")
+  .attr("class", "intro-map-help")
+  .text("Drag to rotate, scroll to zoom");
+
+const introSvg = introWrap
   .append("svg")
   .attr("width", introWidth)
   .attr("height", introHeight)
   .attr("viewBox", `0 0 ${introWidth} ${introHeight}`)
   .attr("preserveAspectRatio", "xMidYMid meet");
 
-const introChart = introSvg.append("g")
-  .attr("transform", `translate(${introMargin.left},${introMargin.top})`);
+Promise.all([
+  d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson"),
+  d3.csv("data/data.csv")
+]).then(([world, data]) => {
+  data.forEach(d => {
+    d.year = +d.year;
+    d.iso3 = (d.iso3 || "").trim().toUpperCase();
+    d.fertility = d.fertility === "" ? null : +d.fertility;
+  });
 
+  const validData = data.filter(d => d.iso3 && d.year != null && d.fertility != null);
+  const dataByIsoYear = d3.group(validData, d => d.iso3, d => d.year);
+  const years = Array.from(new Set(validData.map(d => d.year))).sort((a, b) => a - b);
+  const fertilityExtent = d3.extent(validData, d => d.fertility);
 
-d3.csv("data/data.csv").then(data => {
+  const colorScale = d3.scaleSequential()
+    .domain(fertilityExtent)
+    .interpolator(d3.interpolateYlOrRd);
 
-      data.forEach(d => {
-        d.year = +d.year;
-        d.fertility = d.fertility === "" ? null : +d.fertility;
+  const baseGlobeScale = 220;
+  const projection = d3.geoOrthographic()
+    .scale(baseGlobeScale)
+    .translate([introWidth / 2, introHeight / 2 + 28])
+    .clipAngle(90)
+    .precision(0.5)
+    .rotate([-10, -15, 0]);
+
+  const path = d3.geoPath().projection(projection);
+
+  const mapG = introSvg.append("g");
+  const graticule = d3.geoGraticule10();
+
+  const sphere = mapG.append("path")
+    .datum({ type: "Sphere" })
+    .attr("fill", "#f8fafc")
+    .attr("stroke", "#cbd5e1")
+    .attr("stroke-width", 1.2);
+
+  const graticulePath = mapG.append("path")
+    .datum(graticule)
+    .attr("fill", "none")
+    .attr("stroke", "#dbe3ea")
+    .attr("stroke-width", 0.6)
+    .attr("stroke-opacity", 0.7)
+    .attr("pointer-events", "none");
+
+  const countries = mapG.selectAll("path.intro-country")
+    .data(world.features)
+    .enter()
+    .append("path")
+    .attr("class", "intro-country")
+    .attr("d", path)
+    .attr("stroke", "#fff")
+    .attr("stroke-width", 0.45)
+    .attr("fill", "#d8dee6");
+
+  function redrawIntroGlobe() {
+    sphere.attr("d", path);
+    graticulePath.attr("d", path);
+    countries.attr("d", path);
+  }
+
+  const legendWidth = 210;
+  const legendHeight = 10;
+  const legendX = introWidth - legendWidth - 28;
+  const legendY = 28;
+  const defs = introSvg.append("defs");
+  const gradient = defs.append("linearGradient")
+    .attr("id", "intro-fertility-gradient")
+    .attr("x1", "0%")
+    .attr("x2", "100%")
+    .attr("y1", "0%")
+    .attr("y2", "0%");
+
+  d3.range(0, 1.01, 0.1).forEach(t => {
+    gradient.append("stop")
+      .attr("offset", `${t * 100}%`)
+      .attr("stop-color", colorScale(fertilityExtent[0] + t * (fertilityExtent[1] - fertilityExtent[0])));
+  });
+
+  const legend = introSvg.append("g")
+    .attr("transform", `translate(${legendX},${legendY})`);
+
+  legend.append("text")
+    .attr("x", 0)
+    .attr("y", -8)
+    .attr("fill", "#334155")
+    .attr("font-size", 11)
+    .attr("font-weight", 700)
+    .text("Fertility rate");
+
+  legend.append("rect")
+    .attr("width", legendWidth)
+    .attr("height", legendHeight)
+    .attr("fill", "url(#intro-fertility-gradient)");
+
+  legend.append("text")
+    .attr("x", 0)
+    .attr("y", 26)
+    .attr("fill", "#334155")
+    .attr("font-size", 10)
+    .text(d3.format(".1f")(fertilityExtent[0]));
+
+  legend.append("text")
+    .attr("x", legendWidth)
+    .attr("y", 26)
+    .attr("fill", "#334155")
+    .attr("font-size", 10)
+    .attr("text-anchor", "end")
+    .text(d3.format(".1f")(fertilityExtent[1]));
+
+  const introSlider = d3.select("#intro-year-slider")
+    .attr("min", d3.min(years))
+    .attr("max", d3.max(years))
+    .attr("step", 1)
+    .property("value", d3.min(years));
+
+  const introYearLabel = d3.select("#intro-year-label");
+  let currentIntroYear = +introSlider.property("value");
+
+  function updateIntroMap(year) {
+    year = +year;
+    currentIntroYear = year;
+    introYearLabel.text(year);
+
+    countries.transition()
+      .duration(250)
+      .attr("fill", d => {
+        const iso = (d.id || "").toString().trim().toUpperCase();
+        const row = dataByIsoYear.get(iso)?.get(year)?.[0];
+
+        return row?.fertility != null ? colorScale(row.fertility) : "#d8dee6";
       });
+  }
 
-      const yearlyTotals = Array.from(
-        d3.rollup(
-          data.filter(d => d.fertility != null),
-          values => d3.mean(values, d => d.fertility),
-          d => d.year
-        ),
-        ([year, avgFertility]) => ({ year, avgFertility })
-      ).sort((a, b) => a.year - b.year);
+  let dragStartRotation;
+  let dragStartPointer;
+  const dragBehavior = d3.drag()
+    .on("start", function(event) {
+      dragStartRotation = projection.rotate();
+      dragStartPointer = [event.x, event.y];
+    })
+    .on("drag", function(event) {
+      const zoomScale = projection.scale() / baseGlobeScale;
+      const sensitivity = 0.35 / zoomScale;
+      const dx = event.x - dragStartPointer[0];
+      const dy = event.y - dragStartPointer[1];
+      const nextLatitude = Math.max(-80, Math.min(80, dragStartRotation[1] - dy * sensitivity));
 
-      const x = d3.scaleLinear()
-              .domain(d3.extent(yearlyTotals, d => d.year))
-              .range([0, introInnerWidth]); 
-      introChart.append("g")
-      .attr("transform", "translate(0," + introInnerHeight + ")")
-      .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+      projection.rotate([
+        dragStartRotation[0] + dx * sensitivity,
+        nextLatitude,
+        dragStartRotation[2]
+      ]);
 
-      introChart.append("text")
-        .attr("x", introInnerWidth / 2)
-        .attr("y", introInnerHeight + introMargin.bottom - 8)
-        .attr("text-anchor", "middle")
-        .style("font-size", "12px")
-        .text("Year");
+      redrawIntroGlobe();
+    });
 
-      const y = d3.scaleLinear()
-      .domain([d3.min(yearlyTotals, function(d) {return d.avgFertility; }), d3.max(yearlyTotals, function(d) { return d.avgFertility; })])
-      .range([ introInnerHeight, 0 ]);
-      introChart.append("g")
-        .call(d3.axisLeft(y));
+  const zoomBehavior = d3.zoom()
+    .scaleExtent([1, 5])
+    .filter(event => event.type === "wheel")
+    .on("zoom", function(event) {
+      projection.scale(baseGlobeScale * event.transform.k);
+      redrawIntroGlobe();
+    });
 
-      introChart.append("text")
-        .attr("transform", "rotate(-90)")
-        .attr("x", -introInnerHeight / 2)
-        .attr("y", -introMargin.left + 15)
-        .attr("text-anchor", "middle")
-        .style("font-size", "12px")
-        .text("Average Fertility Rate (Births Per Woman)");
+  introSvg
+    .call(dragBehavior)
+    .call(zoomBehavior);
 
-      introChart.append("path")
-        .datum(yearlyTotals)
-        .attr("fill", "none")
-        .attr("stroke", "steelblue")
+  countries
+    .on("mouseover", function(event, d) {
+      const year = currentIntroYear;
+      const iso = (d.id || "").toString().trim().toUpperCase();
+      const row = dataByIsoYear.get(iso)?.get(year)?.[0];
 
-        .attr("stroke-width", 1.5)
-        .attr("d", d3.line()
-          .x(function(d) { return x(d.year) })
-          .y(function(d) { return y(d.avgFertility) })
-        ); 
-      
-        introChart.selectAll("circle")
-          .data(yearlyTotals)
-          .enter()
-          .append("circle")
-          .attr("cx", d => x(d.year))
-          .attr("cy", d => y(d.avgFertility))
-          .attr("r", 3)
-          .attr("fill", "black")
-          .on("mouseover", function(event, d) {
-            tooltip
-              .style("opacity", 1)
-              .html(`
-                <strong>Year:</strong> ${d.year}<br/>
-                <strong>Average fertility :</strong> ${d.avgFertility.toFixed(2)} births per woman
-              `);
-          })
-          .on("mousemove", function(event) {
-            tooltip
-              .style("left", `${event.pageX + 10}px`)
-              .style("top", `${event.pageY + 10}px`);
-          })
-          .on("mouseout", function() {
-            tooltip.style("opacity", 0);
-          });
-              
-      }
-)
+      d3.select(this)
+        .attr("stroke", "#111827")
+        .attr("stroke-width", 1);
+
+      tooltip
+        .style("opacity", 1)
+        .html(`
+          <strong>${d.properties.name}</strong><br/>
+          Year: ${year}<br/>
+          Fertility: ${row?.fertility == null ? "No data" : d3.format(".2f")(row.fertility)} births per woman
+        `);
+    })
+    .on("mousemove", function(event) {
+      tooltip
+        .style("left", `${event.pageX + 10}px`)
+        .style("top", `${event.pageY + 10}px`);
+    })
+    .on("mouseout", function() {
+      d3.select(this)
+        .attr("stroke", "#fff")
+        .attr("stroke-width", 0.45);
+
+      tooltip.style("opacity", 0);
+    });
+
+  redrawIntroGlobe();
+  updateIntroMap(introSlider.property("value"));
+
+  introSlider.on("input", function() {
+    updateIntroMap(this.value);
+  });
+});
 
 
 
