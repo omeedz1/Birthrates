@@ -79,6 +79,16 @@
                     </select>
                 </label>
                 <label>
+                    Income:
+                    <select id="public-spending-income">
+                        <option value="all">All income levels</option>
+                        <option value="L">Low income</option>
+                        <option value="LM">Lower-middle income</option>
+                        <option value="UM">Upper-middle income</option>
+                        <option value="H">High income</option>
+                    </select>
+                </label>
+                <label>
                     Year:
                     <input type="range" id="public-spending-year-slider" step="1">
                     <span id="public-spending-year-label"></span>
@@ -130,6 +140,29 @@
             </div>
             <p class="lifestyle-notes">
                 As internet penetration rises, fertility generally falls across regions, though the size of that shift varies. East Asia & Pacific moves most on the digital axis from an already low-fertility baseline, while Sub-Saharan Africa shows the largest fertility decline.
+            </p>
+        </div>
+
+        <div id="country-storylines-analysis">
+            <h3>Country Storylines</h3>
+            <div class="country-storyline-controls">
+                <label>
+                    Country:
+                    <select id="storyline-country-select"></select>
+                </label>
+                <label>
+                    Compare with:
+                    <select id="storyline-metric-select">
+                        <option value="gdp">GDP per capita</option>
+                        <option value="urban">Urbanization</option>
+                        <option value="education">Female tertiary enrollment</option>
+                        <option value="population">Population</option>
+                    </select>
+                </label>
+            </div>
+            <div id="country-storyline-chart"></div>
+            <p>
+                Follow one country over time to compare fertility decline with changes in economic, social, and policy conditions.
             </p>
         </div>
 
