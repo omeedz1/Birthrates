@@ -6,6 +6,7 @@ GDP_FILE = "data/gdp.csv"
 URBAN_FILE = "data/Urban_Data.csv"
 EDUCATION_FILE = "data/education.csv"
 POPULATION_FILE = "data/total_population.csv"
+PUBLIC_SPENDING_FILE = "data/public_spending.csv"
 OUTPUT_FILE = "data/data.csv"
 
 def clean_keys(df):
@@ -67,11 +68,60 @@ def clean_education(file_path):
 
     return df
 
+def clean_public_spending(file_path):
+    raw = pd.read_csv(file_path, header=None)
+
+    year_columns = {
+        column: int(value)
+        for column, value in raw.iloc[3].items()
+        if str(value).strip().isdigit()
+    }
+
+    spending_columns = {
+        "Total": "public_spending_total",
+        "Cash": "public_spending_cash",
+        "Services": "public_spending_services",
+        "Tax-breaks for families": "public_spending_tax_breaks",
+    }
+
+    records = []
+    for _, row in raw.iloc[4:].iterrows():
+        iso3 = str(row.iloc[1]).strip().upper()
+        spending_type = str(row.iloc[4]).strip()
+        if spending_type == "-":
+            spending_type = str(row.iloc[5]).strip()
+
+        value_name = spending_columns.get(spending_type)
+        if not value_name or not iso3:
+            continue
+
+        for column, year in year_columns.items():
+            records.append({
+                "iso3": iso3,
+                "year": year,
+                "metric": value_name,
+                "value": row.iloc[column],
+            })
+
+    df = pd.DataFrame(records)
+    df["value"] = df["value"].replace("..", pd.NA)
+    df["value"] = pd.to_numeric(df["value"], errors="coerce")
+
+    df = df.pivot_table(
+        index=["iso3", "year"],
+        columns="metric",
+        values="value",
+        aggfunc="first"
+    ).reset_index()
+
+    return clean_keys(df)
+
 fertility = reshape_worldbank(FERTILITY_FILE, "fertility")
 gdp = reshape_worldbank(GDP_FILE, "gdp")
 urban = reshape_worldbank(URBAN_FILE, "urban")
 education = clean_education(EDUCATION_FILE)
 population = reshape_worldbank(POPULATION_FILE, "population")
+public_spending = clean_public_spending(PUBLIC_SPENDING_FILE)
 
 valid_iso3 = {c.alpha_3 for c in pycountry.countries}
 
@@ -90,6 +140,8 @@ df = fertility.merge(gdp, on=keys, how="outer") \
               .merge(urban, on=keys, how="outer") \
               .merge(education, on=keys, how="outer") \
               .merge(population, on=keys, how="outer")
+
+df = df.merge(public_spending, on=["iso3", "year"], how="left")
 
 df = df.dropna(subset=["country", "iso3", "year"])
 
