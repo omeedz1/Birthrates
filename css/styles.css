@@ -217,26 +217,29 @@ p {
     transition: opacity 0.2s;
 }
 
-#introduction {
-    padding-bottom: 0.5rem;
+#introduction,
+#education-analysis,
+#public-spending-analysis,
+#lifestyle-analysis {
+    max-width: 960px;
+    margin: 24px auto;
     border: 1px solid #d9d9d9;
     border-radius: 6px;
-    padding-top: 0.75rem;
-    padding-left: 1rem;
-    padding-right: 1rem;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+    padding: 1.25rem 1.5rem 1rem;
+    text-align: center;
+}
+
+#education-analysis,
+#public-spending-analysis,
+#lifestyle-analysis {
+    margin-top: 48px;
 }
 
 
 /* Lifestyle analysis section (independent from map) */
 #lifestyle-analysis {
-    margin-top: 40px;
-    padding-top: 20px;
-    border-top: 1px solid #e5e5e5;
-    max-width: 960px;
-    margin-left: auto;
-    margin-right: auto;
     display: block;
-    text-align: center;
 }
 
 .lifestyle-controls {
@@ -369,17 +372,6 @@ p {
     }
 }
 
-
-
-#education-analysis {
-    margin-top: 40px;
-    padding-top: 20px;
-    border-top: 1px solid #e5e5e5;
-    max-width: 960px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
 .education-controls {
     margin: 10px 0 12px;
 }
@@ -433,15 +425,6 @@ p {
     pointer-events: none;
     line-height: 1.35;
     z-index: 9999;
-}
-
-#public-spending-analysis {
-    margin-top: 40px;
-    padding-top: 20px;
-    border-top: 1px solid #e5e5e5;
-    max-width: 960px;
-    margin-left: auto;
-    margin-right: auto;
 }
 
 .public-spending-controls {
