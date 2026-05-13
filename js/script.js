@@ -149,6 +149,11 @@ Promise.all([
   const legend = introSvg.append("g")
     .attr("transform", `translate(${legendX},${legendY})`);
 
+  const introLegendX = d3.scaleLinear()
+    .domain(fertilityExtent)
+    .range([0, legendWidth])
+    .clamp(true);
+
   legend.append("text")
     .attr("x", 0)
     .attr("y", -8)
@@ -176,6 +181,15 @@ Promise.all([
     .attr("font-size", 10)
     .attr("text-anchor", "end")
     .text(d3.format(".1f")(fertilityExtent[1]));
+
+  const introLegendPointer = legend.append("line")
+    .attr("y1", -3)
+    .attr("y2", legendHeight + 3)
+    .attr("stroke", "#111827")
+    .attr("stroke-width", 2)
+    .attr("stroke-linecap", "round")
+    .attr("pointer-events", "none")
+    .style("opacity", 0);
 
   const changeLegend = introSvg.append("g")
     .attr("transform", `translate(28,${legendY})`);
@@ -359,6 +373,22 @@ Promise.all([
         .attr("stroke", "#111827")
         .attr("stroke-width", 1);
 
+      if (row?.fertility != null) {
+        introLegendPointer
+          .interrupt()
+          .style("opacity", 1)
+          .transition()
+          .duration(180)
+          .attr("x1", introLegendX(row.fertility))
+          .attr("x2", introLegendX(row.fertility));
+      } else {
+        introLegendPointer
+          .interrupt()
+          .transition()
+          .duration(120)
+          .style("opacity", 0);
+      }
+
       tooltip
         .style("opacity", 1)
         .html(`
@@ -378,6 +408,11 @@ Promise.all([
         .attr("stroke-width", 0.45);
 
       tooltip.style("opacity", 0);
+      introLegendPointer
+        .interrupt()
+        .transition()
+        .duration(150)
+        .style("opacity", 0);
     });
 
   redrawIntroGlobe();
@@ -872,6 +907,298 @@ Promise.all([
     educationSlider.on("input", function() {
       updateEducationChart(this.value);
     });
+  });
+})();
+
+
+// PUBLIC SPENDING ANALYSIS
+(() => {
+  const spendingMeasures = {
+    public_spending_total: "Total family benefits",
+    public_spending_cash: "Cash benefits",
+    public_spending_services: "Services",
+    public_spending_tax_breaks: "Tax breaks for families"
+  };
+
+  const spendingSelect = d3.select("#public-spending-select");
+  const spendingYearLabel = d3.select("#public-spending-year-label");
+  const spendingSlider = d3.select("#public-spending-year-slider");
+  const chartWrap = d3.select("#public-spending-chart");
+
+  if (chartWrap.empty()) {
+    return;
+  }
+
+  const spendingTooltip = d3
+    .select("body")
+    .append("div")
+    .attr("class", "public-spending-tooltip");
+
+  const fmtSpending = d3.format(".2f");
+  const fmtFertilityRate = d3.format(".2f");
+  const fmtPopulation = d3.format(",");
+
+  const margin = { top: 28, right: 28, bottom: 60, left: 68 };
+  const chartWidth = 960;
+  const chartHeight = 520;
+  const innerWidth = chartWidth - margin.left - margin.right;
+  const innerHeight = chartHeight - margin.top - margin.bottom;
+
+  const svg = chartWrap
+    .append("svg")
+    .attr("width", chartWidth)
+    .attr("height", chartHeight)
+    .attr("viewBox", `0 0 ${chartWidth} ${chartHeight}`)
+    .attr("preserveAspectRatio", "xMidYMid meet");
+
+  const g = svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const x = d3.scaleLinear().range([0, innerWidth]);
+  const y = d3.scaleLinear().range([innerHeight, 0]);
+  const size = d3.scaleSqrt().range([4, 18]);
+
+  const xGridG = g
+    .append("g")
+    .attr("class", "grid-lines")
+    .attr("transform", `translate(0,${innerHeight})`)
+    .attr("stroke", "#eef3f7")
+    .attr("stroke-opacity", 0.35)
+    .attr("stroke-width", 0.7)
+    .attr("pointer-events", "none");
+
+  const yGridG = g
+    .append("g")
+    .attr("class", "grid-lines")
+    .attr("stroke", "#eef3f7")
+    .attr("stroke-opacity", 0.35)
+    .attr("stroke-width", 0.7)
+    .attr("pointer-events", "none");
+
+  const xAxisG = g
+    .append("g")
+    .attr("transform", `translate(0,${innerHeight})`);
+
+  const yAxisG = g.append("g");
+  const pointsG = g.append("g");
+
+  const xAxisLabel = xAxisG
+    .append("text")
+    .attr("x", innerWidth / 2)
+    .attr("y", 44)
+    .attr("fill", "#111")
+    .attr("text-anchor", "middle")
+    .attr("font-size", 12);
+
+  yAxisG
+    .append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("x", -innerHeight / 2)
+    .attr("y", -52)
+    .attr("fill", "#111")
+    .attr("text-anchor", "middle")
+    .attr("font-size", 12)
+    .text("Fertility rate (births per woman)");
+
+  const correlationLabel = g
+    .append("text")
+    .attr("x", innerWidth)
+    .attr("y", 12)
+    .attr("text-anchor", "end")
+    .attr("fill", "#334155")
+    .attr("font-size", 12)
+    .attr("font-weight", 600);
+
+  const noDataLabel = g
+    .append("text")
+    .attr("x", innerWidth / 2)
+    .attr("y", innerHeight / 2)
+    .attr("text-anchor", "middle")
+    .attr("fill", "#64748b")
+    .attr("font-size", 14)
+    .attr("font-weight", 600)
+    .style("display", "none");
+
+  const sizeLegend = g
+    .append("g")
+    .attr("transform", "translate(8, 12)");
+
+  sizeLegend
+    .append("circle")
+    .attr("cx", 8)
+    .attr("cy", 0)
+    .attr("r", 7)
+    .attr("fill", "none")
+    .attr("stroke", "#334155")
+    .attr("stroke-width", 1);
+
+  sizeLegend
+    .append("text")
+    .attr("x", 22)
+    .attr("y", 4)
+    .attr("fill", "#334155")
+    .attr("font-size", 11)
+    .attr("font-weight", 600)
+    .text("Size = population");
+
+  function pearsonCorrelation(values, measure) {
+    if (values.length < 2) return null;
+
+    const meanX = d3.mean(values, d => d[measure]);
+    const meanY = d3.mean(values, d => d.fertility);
+
+    let numerator = 0;
+    let sumSqX = 0;
+    let sumSqY = 0;
+
+    values.forEach(d => {
+      const dx = d[measure] - meanX;
+      const dy = d.fertility - meanY;
+      numerator += dx * dy;
+      sumSqX += dx * dx;
+      sumSqY += dy * dy;
+    });
+
+    const denominator = Math.sqrt(sumSqX * sumSqY);
+    return denominator ? numerator / denominator : null;
+  }
+
+  d3.csv("data/data.csv").then(data => {
+    data.forEach(d => {
+      d.year = +d.year;
+      d.fertility = d.fertility === "" ? null : +d.fertility;
+      d.population = d.population === "" ? null : +d.population;
+      Object.keys(spendingMeasures).forEach(measure => {
+        d[measure] = d[measure] === "" ? null : +d[measure];
+      });
+    });
+
+    const validData = data.filter(d =>
+      d.year != null &&
+      d.fertility != null &&
+      Object.keys(spendingMeasures).some(measure => d[measure] != null)
+    );
+
+    const years = Array.from(new Set(validData.map(d => d.year))).sort((a, b) => a - b);
+    const latestYear = d3.max(years);
+
+    spendingSlider
+      .attr("min", d3.min(years))
+      .attr("max", latestYear)
+      .attr("step", 1)
+      .property("value", latestYear);
+
+    y.domain([0, d3.max(validData, d => d.fertility)]).nice();
+    size
+      .domain(d3.extent(validData.filter(d => d.population != null), d => d.population))
+      .range([4, 18]);
+
+    yAxisG.call(d3.axisLeft(y).ticks(6));
+    yGridG
+      .call(d3.axisLeft(y).tickSize(-innerWidth).tickFormat("").ticks(6))
+      .call(axis => axis.select(".domain").remove())
+      .lower();
+
+    function updatePublicSpendingChart() {
+      const measure = spendingSelect.property("value");
+      const year = +spendingSlider.property("value");
+      spendingYearLabel.text(year);
+
+      const yearData = validData
+        .filter(d => d.year === year && d[measure] != null)
+        .sort((a, b) => (b.population || 0) - (a.population || 0));
+
+      const measureExtent = d3.extent(validData.filter(d => d[measure] != null), d => d[measure]);
+      x.domain([0, measureExtent[1] || 1]).nice();
+
+      xAxisG
+        .transition()
+        .duration(250)
+        .call(d3.axisBottom(x).ticks(6));
+
+      xGridG
+        .transition()
+        .duration(250)
+        .call(d3.axisBottom(x).tickSize(-innerHeight).tickFormat("").ticks(6))
+        .call(axis => axis.select(".domain").remove())
+        .selection()
+        .lower();
+
+      xAxisLabel.text(`${spendingMeasures[measure]} (% of GDP)`);
+
+      const correlation = pearsonCorrelation(yearData, measure);
+      correlationLabel.text(
+        correlation == null
+          ? "Correlation: N/A"
+          : `Correlation (r): ${d3.format(".2f")(correlation)}`
+      );
+
+      noDataLabel
+        .style("display", yearData.length ? "none" : null)
+        .text(`No public spending data for ${year}`);
+
+      const points = pointsG.selectAll("circle")
+        .data(yearData, d => d.iso3);
+
+      points.exit()
+        .transition()
+        .duration(200)
+        .attr("r", 0)
+        .remove();
+
+      const pointsEnter = points.enter()
+        .append("circle")
+        .attr("cx", d => x(d[measure]))
+        .attr("cy", d => y(d.fertility))
+        .attr("r", 0)
+        .attr("fill", "#0f766e")
+        .attr("fill-opacity", 0.72)
+        .attr("stroke", "#134e4a")
+        .attr("stroke-width", 0.8);
+
+      pointsEnter.merge(points)
+        .on("mouseover", function(event, d) {
+          const activeMeasure = spendingSelect.property("value");
+
+          d3.select(this)
+            .attr("stroke-width", 1.5)
+            .attr("fill-opacity", 0.9);
+
+          spendingTooltip
+            .style("opacity", 1)
+            .html(`
+              <strong>${d.country}</strong><br/>
+              ${spendingMeasures[activeMeasure]}: ${fmtSpending(d[activeMeasure])}% of GDP<br/>
+              Fertility: ${fmtFertilityRate(d.fertility)} births per woman<br/>
+              Population: ${d.population == null ? "No data" : fmtPopulation(Math.round(d.population))}
+            `);
+        })
+        .on("mousemove", function(event) {
+          spendingTooltip
+            .style("left", `${event.pageX + 10}px`)
+            .style("top", `${event.pageY + 10}px`);
+        })
+        .on("mouseout", function() {
+          d3.select(this)
+            .attr("stroke-width", 0.8)
+            .attr("fill-opacity", 0.72);
+
+          spendingTooltip.style("opacity", 0);
+        });
+
+      pointsEnter.merge(points)
+        .transition()
+        .duration(350)
+        .attr("cx", d => x(d[measure]))
+        .attr("cy", d => y(d.fertility))
+        .attr("r", d => d.population == null ? 6 : size(d.population));
+    }
+
+    updatePublicSpendingChart();
+
+    spendingSelect.on("change", updatePublicSpendingChart);
+    spendingSlider.on("input", updatePublicSpendingChart);
   });
 })();
 

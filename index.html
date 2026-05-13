@@ -67,6 +67,31 @@
                 
         </div>
 
+        <div id="public-spending-analysis">
+            <h3>Family Policy Spending And Fertility</h3>
+            <div class="public-spending-controls">
+                <label>
+                    Spending measure:
+                    <select id="public-spending-select">
+                        <option value="public_spending_total">Total family benefits</option>
+                        <option value="public_spending_cash">Cash benefits</option>
+                        <option value="public_spending_services">Services</option>
+                        <option value="public_spending_tax_breaks">Tax breaks for families</option>
+                    </select>
+                </label>
+                <label>
+                    Year:
+                    <input type="range" id="public-spending-year-slider" step="1">
+                    <span id="public-spending-year-label"></span>
+                </label>
+            </div>
+            <div id="public-spending-chart"></div>
+            <p>
+                Public family spending varies widely across countries, both in total scale and in the mix of cash payments, services, and tax breaks.
+                This view compares fertility rates against each spending measure as a share of GDP, making it easier to see whether higher spending is associated with higher fertility in a given year.
+            </p>
+        </div>
+
         <div id="lifestyle-analysis">
             <h3>The Modernity Trap: Digital Lifestyle vs. Fertility by Region</h3>
             <div class="viz-guide">
@@ -126,8 +151,6 @@
         
 
         
-        </div>
-
         <div id="tooltip"></div>
     </div>
 

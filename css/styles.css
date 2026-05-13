@@ -419,6 +419,7 @@ p {
     margin-top: 0;
 }
 
+.public-spending-tooltip,
 .education-tooltip {
     position: absolute;
     opacity: 0;
@@ -432,4 +433,50 @@ p {
     pointer-events: none;
     line-height: 1.35;
     z-index: 9999;
+}
+
+#public-spending-analysis {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e5e5;
+    max-width: 960px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.public-spending-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin: 10px 0 12px;
+    font-family: "nyt-franklin", Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.public-spending-controls select {
+    margin-left: 6px;
+    padding: 5px 8px;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    background: #fff;
+    font-family: "nyt-franklin", Arial, sans-serif;
+    font-size: 14px;
+}
+
+.public-spending-controls input {
+    vertical-align: middle;
+}
+
+#public-spending-chart {
+    max-width: 960px;
+    margin: 0 auto;
+}
+
+#public-spending-chart svg {
+    display: block;
+    width: 100%;
+    height: auto;
 }
