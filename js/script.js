@@ -149,6 +149,11 @@ Promise.all([
   const legend = introSvg.append("g")
     .attr("transform", `translate(${legendX},${legendY})`);
 
+  const introLegendX = d3.scaleLinear()
+    .domain(fertilityExtent)
+    .range([0, legendWidth])
+    .clamp(true);
+
   legend.append("text")
     .attr("x", 0)
     .attr("y", -8)
@@ -176,6 +181,15 @@ Promise.all([
     .attr("font-size", 10)
     .attr("text-anchor", "end")
     .text(d3.format(".1f")(fertilityExtent[1]));
+
+  const introLegendPointer = legend.append("line")
+    .attr("y1", -3)
+    .attr("y2", legendHeight + 3)
+    .attr("stroke", "#111827")
+    .attr("stroke-width", 2)
+    .attr("stroke-linecap", "round")
+    .attr("pointer-events", "none")
+    .style("opacity", 0);
 
   const changeLegend = introSvg.append("g")
     .attr("transform", `translate(28,${legendY})`);
@@ -359,6 +373,22 @@ Promise.all([
         .attr("stroke", "#111827")
         .attr("stroke-width", 1);
 
+      if (row?.fertility != null) {
+        introLegendPointer
+          .interrupt()
+          .style("opacity", 1)
+          .transition()
+          .duration(180)
+          .attr("x1", introLegendX(row.fertility))
+          .attr("x2", introLegendX(row.fertility));
+      } else {
+        introLegendPointer
+          .interrupt()
+          .transition()
+          .duration(120)
+          .style("opacity", 0);
+      }
+
       tooltip
         .style("opacity", 1)
         .html(`
@@ -378,6 +408,11 @@ Promise.all([
         .attr("stroke-width", 0.45);
 
       tooltip.style("opacity", 0);
+      introLegendPointer
+        .interrupt()
+        .transition()
+        .duration(150)
+        .style("opacity", 0);
     });
 
   redrawIntroGlobe();
@@ -390,7 +425,7 @@ Promise.all([
 
 
 
-
+/*
 //WORLD MAP START
 
 const fmt = (v, type) => {
@@ -549,6 +584,8 @@ Promise.all([
 });
 
 //WORLD MAP END
+
+*/
 
 
 (() => {
@@ -1196,6 +1233,773 @@ Promise.all([
     gdpSlider.on("input", function() {
       updategdpChart(this.value);
     });
+  });
+})();
+
+
+// PUBLIC SPENDING ANALYSIS
+(() => {
+  const spendingComponents = [
+    { key: "public_spending_cash", label: "Cash benefits", color: "#0f766e" },
+    { key: "public_spending_services", label: "Services", color: "#2563eb" },
+    { key: "public_spending_tax_breaks", label: "Tax breaks", color: "#d97706" }
+  ];
+
+  const sortSelect = d3.select("#public-spending-sort");
+  const spendingYearLabel = d3.select("#public-spending-year-label");
+  const spendingSlider = d3.select("#public-spending-year-slider");
+  const chartWrap = d3.select("#public-spending-chart");
+
+  if (chartWrap.empty()) {
+    return;
+  }
+
+  const spendingTooltip = d3
+    .select("body")
+    .append("div")
+    .attr("class", "public-spending-tooltip");
+
+  const fmtSpending = d3.format(".2f");
+  const fmtFertilityRate = d3.format(".2f");
+  const fmtPopulation = d3.format(",");
+
+  const margin = { top: 74, right: 34, bottom: 58, left: 156 };
+  const chartWidth = 960;
+  const chartHeight = 760;
+  const innerWidth = chartWidth - margin.left - margin.right;
+  const innerHeight = chartHeight - margin.top - margin.bottom;
+
+  const svg = chartWrap
+    .append("svg")
+    .attr("width", chartWidth)
+    .attr("height", chartHeight)
+    .attr("viewBox", `0 0 ${chartWidth} ${chartHeight}`)
+    .attr("preserveAspectRatio", "xMidYMid meet");
+
+  const g = svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const spendingX = d3.scaleLinear().range([0, innerWidth]);
+  const fertilityX = d3.scaleLinear().range([0, innerWidth]);
+  const y = d3.scaleBand().range([0, innerHeight]).paddingInner(0.24).paddingOuter(0.12);
+
+  const spendingGridG = g
+    .append("g")
+    .attr("class", "grid-lines")
+    .attr("transform", `translate(0,${innerHeight})`)
+    .attr("stroke", "#eef3f7")
+    .attr("stroke-opacity", 0.35)
+    .attr("stroke-width", 0.7)
+    .attr("pointer-events", "none");
+
+  const spendingAxisG = g
+    .append("g")
+    .attr("transform", `translate(0,${innerHeight})`);
+
+  const fertilityAxisG = g.append("g");
+  const yAxisG = g.append("g");
+  const barsG = g.append("g");
+  const fertilityG = g.append("g")
+    .attr("pointer-events", "none");
+
+  spendingAxisG
+    .append("text")
+    .attr("x", innerWidth / 2)
+    .attr("y", 44)
+    .attr("fill", "#111")
+    .attr("text-anchor", "middle")
+    .attr("font-size", 12);
+
+  fertilityAxisG
+    .append("text")
+    .attr("x", innerWidth / 2)
+    .attr("y", -36)
+    .attr("fill", "#111")
+    .attr("text-anchor", "middle")
+    .attr("font-size", 12)
+    .text("Fertility rate (births per woman)");
+
+  spendingAxisG.select("text").text("Public spending on family benefits (% of GDP)");
+
+  const noDataLabel = g
+    .append("text")
+    .attr("x", innerWidth / 2)
+    .attr("y", innerHeight / 2)
+    .attr("text-anchor", "middle")
+    .attr("fill", "#64748b")
+    .attr("font-size", 14)
+    .attr("font-weight", 600)
+    .style("display", "none");
+
+  const mixLegend = g
+    .append("g")
+    .attr("transform", "translate(0, -66)");
+
+  spendingComponents.forEach((component, index) => {
+    const item = mixLegend
+      .append("g")
+      .attr("transform", `translate(${index * 130}, 0)`);
+
+    item
+      .append("rect")
+      .attr("width", 12)
+      .attr("height", 12)
+      .attr("rx", 2)
+      .attr("fill", component.color);
+
+    item
+      .append("text")
+      .attr("x", 18)
+      .attr("y", 10)
+      .attr("fill", "#334155")
+      .attr("font-size", 11)
+      .attr("font-weight", 600)
+      .text(component.label);
+  });
+
+  const fertilityLegend = mixLegend
+    .append("g")
+    .attr("transform", `translate(${spendingComponents.length * 130 + 8}, 6)`);
+
+  fertilityLegend
+    .append("circle")
+    .attr("cx", 6)
+    .attr("cy", 0)
+    .attr("r", 5)
+    .attr("fill", "#111827");
+
+  fertilityLegend
+    .append("text")
+    .attr("x", 18)
+    .attr("y", 4)
+    .attr("fill", "#334155")
+    .attr("font-size", 11)
+    .attr("font-weight", 600)
+    .text("Fertility rate");
+
+  d3.csv("data/data.csv").then(data => {
+    data.forEach(d => {
+      d.year = +d.year;
+      d.fertility = d.fertility === "" ? null : +d.fertility;
+      d.population = d.population === "" ? null : +d.population;
+      d.public_spending_total = d.public_spending_total === "" ? null : +d.public_spending_total;
+      spendingComponents.forEach(component => {
+        d[component.key] = d[component.key] === "" ? null : +d[component.key];
+      });
+    });
+
+    const validData = data.filter(d =>
+      d.year != null &&
+      d.fertility != null &&
+      (d.public_spending_total != null || spendingComponents.some(component => d[component.key] != null))
+    );
+
+    const years = Array.from(new Set(validData.map(d => d.year))).sort((a, b) => a - b);
+    const latestYear = d3.max(years);
+
+    spendingSlider
+      .attr("min", d3.min(years))
+      .attr("max", latestYear)
+      .attr("step", 1)
+      .property("value", latestYear);
+
+    fertilityX.domain([0, d3.max(validData, d => d.fertility)]).nice();
+    fertilityAxisG.call(d3.axisTop(fertilityX).ticks(6));
+
+    let hasRenderedPublicSpending = false;
+    const transitionDuration = 500;
+
+    function updatePublicSpendingChart() {
+      const shouldAnimate = hasRenderedPublicSpending;
+      const year = +spendingSlider.property("value");
+      const sortBy = sortSelect.property("value");
+      spendingYearLabel.text(year);
+
+      const yearData = validData
+        .filter(d => d.year === year)
+        .map(d => {
+          const components = spendingComponents.map(component => ({
+            ...component,
+            value: d[component.key] || 0
+          }));
+          const componentTotal = d3.sum(components, component => component.value);
+
+          return {
+            ...d,
+            components,
+            componentTotal,
+            totalSpending: d.public_spending_total ?? componentTotal
+          };
+        })
+        .filter(d => d.componentTotal > 0 || d.totalSpending > 0);
+
+      yearData.sort((a, b) => {
+        if (sortBy === "fertility") return d3.descending(a.fertility, b.fertility);
+        if (sortBy === "country") return d3.ascending(a.country, b.country);
+        return d3.descending(a.totalSpending, b.totalSpending);
+      });
+
+      y.domain(yearData.map(d => d.country));
+      spendingX.domain([0, d3.max(yearData, d => Math.max(d.totalSpending, d.componentTotal)) || 1]).nice();
+
+      const spendingAxis = shouldAnimate
+        ? spendingAxisG.transition().duration(transitionDuration)
+        : spendingAxisG;
+
+      spendingAxis.call(d3.axisBottom(spendingX).ticks(6));
+
+      spendingAxisG.select("text")
+        .attr("x", innerWidth / 2)
+        .attr("y", 44)
+        .attr("fill", "#111")
+        .attr("text-anchor", "middle")
+        .attr("font-size", 12)
+        .text("Public spending on family benefits (% of GDP)");
+
+      const spendingGrid = shouldAnimate
+        ? spendingGridG.transition().duration(transitionDuration)
+        : spendingGridG;
+
+      spendingGrid
+        .call(d3.axisBottom(spendingX).tickSize(-innerHeight).tickFormat("").ticks(6))
+        .call(axis => axis.select(".domain").remove());
+
+      spendingGridG.lower();
+
+      const yAxis = shouldAnimate
+        ? yAxisG.transition().duration(transitionDuration)
+        : yAxisG;
+
+      yAxis.call(d3.axisLeft(y).tickSize(0));
+
+      yAxisG.select(".domain").remove();
+
+      noDataLabel
+        .style("display", yearData.length ? "none" : null)
+        .text(`No public spending data for ${year}`);
+
+      const rows = barsG.selectAll("g.public-spending-row")
+        .data(yearData, d => d.iso3);
+
+      rows.exit()
+        .transition()
+        .duration(shouldAnimate ? 220 : 0)
+        .style("opacity", 0)
+        .remove();
+
+      const rowsEnter = rows.enter()
+        .append("g")
+        .attr("class", "public-spending-row")
+        .attr("transform", d => `translate(0,${y(d.country) || 0})`)
+        .style("opacity", shouldAnimate ? 0 : 1);
+
+      rowsEnter
+        .append("rect")
+        .attr("class", "public-spending-row-hitbox")
+        .attr("x", 0)
+        .attr("y", 0)
+        .attr("width", innerWidth)
+        .attr("height", y.bandwidth())
+        .attr("fill", "transparent");
+
+      const rowsMerged = rowsEnter.merge(rows)
+        .on("mouseover", function(event, d) {
+          d3.select(this).selectAll(".public-spending-segment").attr("stroke-opacity", 0.85);
+          d3.select(this).select("circle").attr("r", 5.5);
+
+          spendingTooltip
+            .style("opacity", 1)
+            .html(`
+              <strong>${d.country}</strong><br/>
+              Total family benefits: ${fmtSpending(d.totalSpending)}% of GDP<br/>
+              Cash: ${fmtSpending(d.public_spending_cash || 0)}%<br/>
+              Services: ${fmtSpending(d.public_spending_services || 0)}%<br/>
+              Tax breaks: ${fmtSpending(d.public_spending_tax_breaks || 0)}%<br/>
+              Fertility: ${fmtFertilityRate(d.fertility)} births per woman<br/>
+              Population: ${d.population == null ? "No data" : fmtPopulation(Math.round(d.population))}
+            `);
+        })
+        .on("mousemove", function(event) {
+          spendingTooltip
+            .style("left", `${event.pageX + 10}px`)
+            .style("top", `${event.pageY + 10}px`);
+        })
+        .on("mouseout", function() {
+          d3.select(this).selectAll(".public-spending-segment").attr("stroke-opacity", 0);
+          d3.select(this).select("circle").attr("r", 4.5);
+          spendingTooltip.style("opacity", 0);
+        });
+
+      rowsMerged.select(".public-spending-row-hitbox")
+        .attr("height", y.bandwidth());
+
+      const rowPosition = shouldAnimate
+        ? rowsMerged.transition().duration(transitionDuration)
+        : rowsMerged;
+
+      rowPosition
+        .style("opacity", 1)
+        .attr("transform", d => `translate(0,${y(d.country) || 0})`);
+
+      rowsMerged.each(function(row) {
+        let x0 = 0;
+        const segments = row.components.map(component => {
+          const segment = {
+            ...component,
+            x0,
+            x1: x0 + component.value
+          };
+          x0 = segment.x1;
+          return segment;
+        });
+
+        const segmentRects = d3.select(this)
+          .selectAll("rect.public-spending-segment")
+          .data(segments, d => d.key);
+
+        const segmentRectsEnter = segmentRects.enter()
+          .append("rect")
+          .attr("class", "public-spending-segment")
+          .attr("x", d => spendingX(d.x0))
+          .attr("y", 0)
+          .attr("height", y.bandwidth())
+          .attr("width", shouldAnimate ? 0 : d => Math.max(0, spendingX(d.x1) - spendingX(d.x0)))
+          .attr("fill", d => d.color)
+          .attr("stroke", "#111827")
+          .attr("stroke-opacity", 0)
+          .attr("stroke-width", 0.7);
+
+        const segmentRectsMerged = segmentRectsEnter.merge(segmentRects);
+        const segmentUpdate = shouldAnimate
+          ? segmentRectsMerged.transition().duration(transitionDuration)
+          : segmentRectsMerged;
+
+        segmentUpdate
+          .attr("x", d => spendingX(d.x0))
+          .attr("y", 0)
+          .attr("height", y.bandwidth())
+          .attr("width", d => Math.max(0, spendingX(d.x1) - spendingX(d.x0)))
+          .attr("fill", d => d.color);
+
+        segmentRects.exit().remove();
+      });
+
+      const fertilityDots = fertilityG.selectAll("circle")
+        .data(yearData, d => d.iso3);
+
+      fertilityDots.exit()
+        .transition()
+        .duration(shouldAnimate ? 220 : 0)
+        .attr("r", 0)
+        .remove();
+
+      const fertilityDotsEnter = fertilityDots.enter()
+        .append("circle")
+        .attr("cx", d => fertilityX(d.fertility))
+        .attr("cy", d => (y(d.country) || 0) + y.bandwidth() / 2)
+        .attr("r", shouldAnimate ? 0 : 4.5)
+        .attr("fill", "#111827")
+        .attr("stroke", "#fff")
+        .attr("stroke-width", 1.2);
+
+      const fertilityDotsMerged = fertilityDotsEnter.merge(fertilityDots);
+      const fertilityDotsUpdate = shouldAnimate
+        ? fertilityDotsMerged.transition().duration(transitionDuration)
+        : fertilityDotsMerged;
+
+      fertilityDotsUpdate
+        .attr("cx", d => fertilityX(d.fertility))
+        .attr("cy", d => (y(d.country) || 0) + y.bandwidth() / 2)
+        .attr("r", 4.5);
+
+      hasRenderedPublicSpending = true;
+    }
+
+    updatePublicSpendingChart();
+
+    sortSelect.on("change", updatePublicSpendingChart);
+    spendingSlider.on("input", updatePublicSpendingChart);
+  });
+})();
+
+
+// COUNTRY STORYLINES
+(() => {
+  const chartWrap = d3.select("#country-storyline-chart");
+  const countrySelect = d3.select("#storyline-country-select");
+  const metricSelect = d3.select("#storyline-metric-select");
+
+  if (chartWrap.empty()) {
+    return;
+  }
+
+  const metricConfig = {
+    gdp: {
+      label: "GDP per capita",
+      axisLabel: "GDP per capita (current US$)",
+      format: d => `$${d3.format(",.0f")(d)}`
+    },
+    urban: {
+      label: "Urbanization",
+      axisLabel: "Urban population (% of total)",
+      format: d => `${d3.format(".1f")(d)}%`
+    },
+    education: {
+      label: "Female tertiary enrollment",
+      axisLabel: "Female tertiary enrollment (% gross)",
+      format: d => `${d3.format(".1f")(d)}%`
+    },
+    population: {
+      label: "Population",
+      axisLabel: "Population",
+      format: d => d3.format(",.0f")(d)
+    }
+  };
+
+  const storylineTooltip = d3
+    .select("body")
+    .append("div")
+    .attr("class", "country-storyline-tooltip");
+
+  const margin = { top: 48, right: 86, bottom: 54, left: 68 };
+  const chartWidth = 960;
+  const chartHeight = 460;
+  const innerWidth = chartWidth - margin.left - margin.right;
+  const innerHeight = chartHeight - margin.top - margin.bottom;
+
+  const svg = chartWrap
+    .append("svg")
+    .attr("width", chartWidth)
+    .attr("height", chartHeight)
+    .attr("viewBox", `0 0 ${chartWidth} ${chartHeight}`)
+    .attr("preserveAspectRatio", "xMidYMid meet");
+
+  const g = svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const x = d3.scaleLinear().range([0, innerWidth]);
+  const yFertility = d3.scaleLinear().range([innerHeight, 0]);
+  const yMetric = d3.scaleLinear().range([innerHeight, 0]);
+
+  const xAxisG = g.append("g").attr("transform", `translate(0,${innerHeight})`);
+  const fertilityAxisG = g.append("g");
+  const metricAxisG = g.append("g").attr("transform", `translate(${innerWidth},0)`);
+
+  xAxisG
+    .append("text")
+    .attr("x", innerWidth / 2)
+    .attr("y", 40)
+    .attr("fill", "#111")
+    .attr("text-anchor", "middle")
+    .attr("font-size", 12)
+    .text("Year");
+
+  fertilityAxisG
+    .append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("x", -innerHeight / 2)
+    .attr("y", -50)
+    .attr("fill", "#1d4ed8")
+    .attr("text-anchor", "middle")
+    .attr("font-size", 12)
+    .text("Fertility rate");
+
+  const metricAxisLabel = metricAxisG
+    .append("text")
+    .attr("transform", "rotate(90)")
+    .attr("x", innerHeight / 2)
+    .attr("y", -58)
+    .attr("fill", "#b45309")
+    .attr("text-anchor", "middle")
+    .attr("font-size", 12);
+
+  const gridG = g
+    .append("g")
+    .attr("class", "grid-lines")
+    .attr("stroke", "#eef3f7")
+    .attr("stroke-opacity", 0.45)
+    .attr("stroke-width", 0.7)
+    .attr("pointer-events", "none");
+
+  const linesG = g.append("g");
+
+  const fertilityPath = linesG
+    .append("path")
+    .attr("fill", "none")
+    .attr("stroke", "#1d4ed8")
+    .attr("stroke-width", 2.4);
+
+  const metricPath = linesG
+    .append("path")
+    .attr("fill", "none")
+    .attr("stroke", "#b45309")
+    .attr("stroke-width", 2.4);
+
+  const focusG = g
+    .append("g")
+    .attr("pointer-events", "none")
+    .style("opacity", 0);
+
+  focusG
+    .append("line")
+    .attr("y1", 0)
+    .attr("y2", innerHeight)
+    .attr("stroke", "#64748b")
+    .attr("stroke-width", 1)
+    .attr("stroke-dasharray", "4,4");
+
+  focusG
+    .append("circle")
+    .attr("class", "focus-fertility")
+    .attr("r", 4.5)
+    .attr("fill", "#1d4ed8")
+    .attr("stroke", "#fff")
+    .attr("stroke-width", 1.2);
+
+  focusG
+    .append("circle")
+    .attr("class", "focus-metric")
+    .attr("r", 4.5)
+    .attr("fill", "#b45309")
+    .attr("stroke", "#fff")
+    .attr("stroke-width", 1.2);
+
+  g.append("rect")
+    .attr("width", innerWidth)
+    .attr("height", innerHeight)
+    .attr("fill", "transparent")
+    .on("mousemove", function(event) {
+      const activeRows = g.datum();
+      if (!activeRows?.length) return;
+
+      const [mx] = d3.pointer(event, this);
+      const year = Math.round(x.invert(mx));
+      const row = activeRows.reduce((closest, current) =>
+        Math.abs(current.year - year) < Math.abs(closest.year - year) ? current : closest
+      );
+      const metricKey = metricSelect.property("value");
+      const metric = metricConfig[metricKey];
+
+      focusG
+        .style("opacity", 1)
+        .attr("transform", `translate(${x(row.year)},0)`);
+
+      focusG.select(".focus-fertility")
+        .attr("cy", yFertility(row.fertility));
+
+      focusG.select(".focus-metric")
+        .style("display", row[metricKey] == null ? "none" : null)
+        .attr("cy", row[metricKey] == null ? 0 : yMetric(row[metricKey]));
+
+      storylineTooltip
+        .style("opacity", 1)
+        .style("left", `${event.pageX + 12}px`)
+        .style("top", `${event.pageY + 12}px`)
+        .html(`
+          <strong>${countrySelect.property("selectedOptions")[0]?.text || ""}</strong><br/>
+          Year: ${row.year}<br/>
+          Fertility: ${d3.format(".2f")(row.fertility)} births per woman<br/>
+          ${metric.label}: ${row[metricKey] == null ? "No data" : metric.format(row[metricKey])}
+        `);
+    })
+    .on("mouseout", function() {
+      focusG.style("opacity", 0);
+      storylineTooltip.style("opacity", 0);
+    });
+
+  const legend = g.append("g").attr("transform", "translate(0, -28)");
+
+  legend.append("line")
+    .attr("x1", 0)
+    .attr("x2", 24)
+    .attr("stroke", "#1d4ed8")
+    .attr("stroke-width", 2.4);
+
+  legend.append("text")
+    .attr("x", 32)
+    .attr("y", 4)
+    .attr("fill", "#334155")
+    .attr("font-size", 11)
+    .attr("font-weight", 600)
+    .text("Fertility rate");
+
+  legend.append("line")
+    .attr("class", "storyline-metric-legend-line")
+    .attr("x1", 142)
+    .attr("x2", 166)
+    .attr("stroke", "#b45309")
+    .attr("stroke-width", 2.4);
+
+  const metricLegendLabel = legend.append("text")
+    .attr("x", 174)
+    .attr("y", 4)
+    .attr("fill", "#334155")
+    .attr("font-size", 11)
+    .attr("font-weight", 600);
+
+  const storylineNoDataLabel = g
+    .append("text")
+    .attr("x", innerWidth / 2)
+    .attr("y", innerHeight / 2)
+    .attr("text-anchor", "middle")
+    .attr("fill", "#64748b")
+    .attr("font-size", 14)
+    .attr("font-weight", 600)
+    .style("display", "none");
+
+  function numericOrNull(value) {
+    if (value === "") return null;
+    const number = +value;
+    return Number.isFinite(number) ? number : null;
+  }
+
+  d3.csv("data/data.csv").then(data => {
+    data.forEach(d => {
+      d.year = +d.year;
+      d.fertility = numericOrNull(d.fertility);
+      Object.keys(metricConfig).forEach(metric => {
+        d[metric] = numericOrNull(d[metric]);
+      });
+    });
+
+    const countries = Array.from(
+      d3.group(
+        data.filter(d => d.iso3 && d.country && d.fertility != null),
+        d => d.iso3
+      ),
+      ([iso3, rows]) => {
+        const sortedRows = rows.sort((a, b) => d3.ascending(a.year, b.year));
+        const baseline = sortedRows.find(d => d.year === 1990);
+        const latest = sortedRows[sortedRows.length - 1];
+
+        return {
+          iso3,
+          country: sortedRows[0].country,
+          baselineFertility: baseline?.fertility,
+          latestFertility: latest?.fertility,
+          latestYear: latest?.year,
+          decline: baseline?.fertility == null || latest?.fertility == null
+            ? null
+            : baseline.fertility - latest.fertility
+        };
+      }
+    )
+      .filter(d => d.decline != null && d.latestYear > 1990)
+      .sort((a, b) => d3.descending(a.decline, b.decline))
+      .slice(0, 20);
+
+    countrySelect
+      .selectAll("option")
+      .data(countries)
+      .enter()
+      .append("option")
+      .attr("value", d => d.iso3)
+      .text(d => `${d.country} (-${d3.format(".2f")(d.decline)})`);
+
+    countrySelect.property("value", countries[0]?.iso3);
+
+    function updateStorylineChart() {
+      const iso3 = countrySelect.property("value");
+      const metricKey = metricSelect.property("value");
+      const metric = metricConfig[metricKey];
+      const countryRows = data
+        .filter(d => d.iso3 === iso3 && d.fertility != null)
+        .sort((a, b) => d3.ascending(a.year, b.year));
+      const metricRows = countryRows.filter(d => d[metricKey] != null);
+      const selectedCountry = countrySelect.property("selectedOptions")[0]?.text.replace(/\s+\(-?\d+\.\d+\)$/, "") || "this country";
+
+      if (!metricRows.length) {
+        g.datum([]);
+        fertilityPath.datum([]).attr("d", null);
+        metricPath.datum([]).attr("d", null);
+        focusG.style("opacity", 0);
+        storylineTooltip.style("opacity", 0);
+        storylineNoDataLabel
+          .style("display", null)
+          .text(`No ${metric.label.toLowerCase()} data available for ${selectedCountry}.`);
+        xAxisG.selectAll(".tick").remove();
+        fertilityAxisG.selectAll(".tick").remove();
+        metricAxisG.selectAll(".tick").remove();
+        gridG.selectAll("*").remove();
+        metricLegendLabel.text(metric.label);
+        metricAxisLabel.text(metric.axisLabel);
+        return;
+      }
+
+      storylineNoDataLabel.style("display", "none");
+      const xRows = metricRows.length ? metricRows : countryRows;
+      const xExtent = d3.extent(xRows, d => d.year);
+      const visibleRows = countryRows.filter(d => d.year >= xExtent[0] && d.year <= xExtent[1]);
+
+      g.datum(visibleRows);
+
+      x.domain(xExtent);
+      yFertility.domain([0, d3.max(visibleRows, d => d.fertility) || 1]).nice();
+      yMetric.domain([0, d3.max(metricRows, d => d[metricKey]) || 1]).nice();
+
+      xAxisG.transition().duration(350).call(d3.axisBottom(x).tickFormat(d3.format("d")).ticks(7));
+      fertilityAxisG.transition().duration(350).call(d3.axisLeft(yFertility).ticks(6));
+      metricAxisG.transition().duration(350).call(d3.axisRight(yMetric).ticks(6));
+
+      fertilityAxisG.select("text")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -innerHeight / 2)
+        .attr("y", -50)
+        .attr("fill", "#1d4ed8")
+        .attr("text-anchor", "middle")
+        .attr("font-size", 12)
+        .text("Fertility rate");
+
+      metricAxisLabel
+        .attr("transform", "rotate(90)")
+        .attr("x", innerHeight / 2)
+        .attr("y", -58)
+        .attr("fill", "#b45309")
+        .attr("text-anchor", "middle")
+        .attr("font-size", 12)
+        .text(metric.axisLabel);
+
+      gridG
+        .transition()
+        .duration(350)
+        .call(d3.axisLeft(yFertility).tickSize(-innerWidth).tickFormat("").ticks(6))
+        .call(axis => axis.select(".domain").remove())
+        .selection()
+        .lower();
+
+      const fertilityLine = d3.line()
+        .defined(d => d.fertility != null)
+        .x(d => x(d.year))
+        .y(d => yFertility(d.fertility));
+
+      const metricLine = d3.line()
+        .defined(d => d[metricKey] != null)
+        .x(d => x(d.year))
+        .y(d => yMetric(d[metricKey]));
+
+      fertilityPath
+        .datum(visibleRows)
+        .transition()
+        .duration(450)
+        .attr("d", fertilityLine);
+
+      metricPath
+        .datum(visibleRows)
+        .transition()
+        .duration(450)
+        .attr("d", metricLine);
+
+      metricLegendLabel.text(metric.label);
+      focusG.style("opacity", 0);
+      storylineTooltip.style("opacity", 0);
+    }
+
+    updateStorylineChart();
+
+    countrySelect.on("change", updateStorylineChart);
+    metricSelect.on("change", updateStorylineChart);
   });
 })();
 

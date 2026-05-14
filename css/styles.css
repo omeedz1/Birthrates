@@ -217,26 +217,31 @@ p {
     transition: opacity 0.2s;
 }
 
-#introduction {
-    padding-bottom: 0.5rem;
+#introduction,
+#education-analysis,
+#public-spending-analysis,
+#country-storylines-analysis,
+#lifestyle-analysis {
+    max-width: 960px;
+    margin: 24px auto;
     border: 1px solid #d9d9d9;
     border-radius: 6px;
-    padding-top: 0.75rem;
-    padding-left: 1rem;
-    padding-right: 1rem;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+    padding: 1.25rem 1.5rem 1rem;
+    text-align: center;
+}
+
+#education-analysis,
+#public-spending-analysis,
+#country-storylines-analysis,
+#lifestyle-analysis {
+    margin-top: 48px;
 }
 
 
 /* Lifestyle analysis section (independent from map) */
 #lifestyle-analysis {
-    margin-top: 40px;
-    padding-top: 20px;
-    border-top: 1px solid #e5e5e5;
-    max-width: 960px;
-    margin-left: auto;
-    margin-right: auto;
     display: block;
-    text-align: center;
 }
 
 .lifestyle-controls {
@@ -310,7 +315,7 @@ p {
 
 #lifestyle-analysis > .lifestyle-notes {
     display: block;
-    width: 100%;
+    width: auto;
     clear: both;
 }
 
@@ -332,7 +337,7 @@ p {
 
 .lifestyle-notes {
     margin: 18px auto 0;
-    max-width: 960px;
+    max-width: 820px;
     text-align: center;
     color: #334155;
 }
@@ -367,17 +372,6 @@ p {
         flex-basis: auto;
         width: 100%;
     }
-}
-
-
-
-#education-analysis {
-    margin-top: 40px;
-    padding-top: 20px;
-    border-top: 1px solid #e5e5e5;
-    max-width: 960px;
-    margin-left: auto;
-    margin-right: auto;
 }
 
 .education-controls {
@@ -419,6 +413,8 @@ p {
     margin-top: 0;
 }
 
+.country-storyline-tooltip,
+.public-spending-tooltip,
 .education-tooltip {
     position: absolute;
     opacity: 0;
@@ -447,7 +443,38 @@ p {
     margin: 10px 0 12px;
 }
 
-#gdp-chart {
+#gdp-chart,
+.country-storyline-controls,
+.public-spending-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin: 10px 0 12px;
+    font-family: "nyt-franklin", Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.country-storyline-controls select,
+.public-spending-controls select {
+    margin-left: 6px;
+    padding: 5px 8px;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    background: #fff;
+    font-family: "nyt-franklin", Arial, sans-serif;
+    font-size: 14px;
+}
+
+.country-storyline-controls input,
+.public-spending-controls input {
+    vertical-align: middle;
+}
+
+#country-storyline-chart,
+#public-spending-chart {
     max-width: 960px;
     margin: 0 auto;
 }
@@ -465,7 +492,9 @@ p {
     margin: 0;
 }
 
-#gdp-chart svg {
+#gdp-chart svg,
+#country-storyline-chart svg,
+#public-spending-chart svg {
     display: block;
     width: 100%;
     height: auto;

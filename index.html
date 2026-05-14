@@ -36,7 +36,7 @@
                 <span id="yearLabel"></span>
               </label>
         </div>
-         
+
         <div class="vis-grid">
             <div>
                 <h3>World Map</h3>
@@ -85,6 +85,38 @@
                 
                     
                 
+        <div id="public-spending-analysis">
+            <h3>Family Policy Spending And Fertility</h3>
+            <div class="public-spending-controls">
+                <label>
+                    Sort by:
+                    <select id="public-spending-sort">
+                        <option value="spending">Total spending</option>
+                        <option value="fertility">Fertility rate</option>
+                        <option value="country">Country name</option>
+                    </select>
+                </label>
+                <label>
+                    Income:
+                    <select id="public-spending-income">
+                        <option value="all">All income levels</option>
+                        <option value="L">Low income</option>
+                        <option value="LM">Lower-middle income</option>
+                        <option value="UM">Upper-middle income</option>
+                        <option value="H">High income</option>
+                    </select>
+                </label>
+                <label>
+                    Year:
+                    <input type="range" id="public-spending-year-slider" step="1">
+                    <span id="public-spending-year-label"></span>
+                </label>
+            </div>
+            <div id="public-spending-chart"></div>
+            <p>
+                Public family spending varies widely across countries, both in total scale and in the mix of cash payments, services, and tax breaks.
+                This view shows each country's family benefits as a share of GDP, with fertility overlaid as a dot so the spending mix and fertility level can be compared country by country.
+            </p>
         </div>
 
         <div id="lifestyle-analysis">
@@ -125,29 +157,36 @@
                 <div id="lifestyle-legend-container"></div>
             </div>
             <p class="lifestyle-notes">
-                Although there is some variance, each region remains in their original "quadrant" of the graph.
+                As internet penetration rises, fertility generally falls across regions, though the size of that shift varies. East Asia & Pacific moves most on the digital axis from an already low-fertility baseline, while Sub-Saharan Africa shows the largest fertility decline.
+            </p>
+        </div>
 
-                East Asia & Pacific experiences the largest shift from its original quadrant, but this is due to increasing internet penetration rates when they already had a low birth rate.
-
-                Sub-Saharan Africa experiences a significant decrease in birthrates as their internet penetration rates rose from 2% to 33% in this period.
-
-                Every region experienced some decrease in birth rates for its increase in internet penetration rates. The increase were not necessarily equal for
-
-                for all regions (most had a major increase in internet penetration rates but a small decrease in birth rates). However, there is an observable trend.
-
-                Put together, these factors suggest an association between internet penetration and a decrease in birth rates. Furthermore, they suggest that regional
-
-                differences are not a significant reason for the decrease in birth rates in some areas. If there is a cultural reason for why some countries are not
-
-                experiencing a birth rate decrease, it may be more valuable to explore those countries individually rather than broad regions that they are a part of.
+        <div id="country-storylines-analysis">
+            <h3>Country Storylines</h3>
+            <div class="country-storyline-controls">
+                <label>
+                    Country:
+                    <select id="storyline-country-select"></select>
+                </label>
+                <label>
+                    Compare with:
+                    <select id="storyline-metric-select">
+                        <option value="gdp">GDP per capita</option>
+                        <option value="urban">Urbanization</option>
+                        <option value="education">Female tertiary enrollment</option>
+                        <option value="population">Population</option>
+                    </select>
+                </label>
+            </div>
+            <div id="country-storyline-chart"></div>
+            <p>
+                Follow one country over time to compare fertility decline with changes in economic, social, and policy conditions.
             </p>
         </div>
 
         
 
         
-        </div>
-
         <div id="tooltip"></div>
     </div>
 
