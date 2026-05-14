@@ -27,6 +27,11 @@ const introSvg = introWrap
   .attr("viewBox", `0 0 ${introWidth} ${introHeight}`)
   .attr("preserveAspectRatio", "xMidYMid meet");
 
+const tooltip = d3
+    .select("body")
+    .append("div")
+    .attr("class", "intro-tooltip");
+
 Promise.all([
   d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson"),
   d3.csv("data/data.csv")
