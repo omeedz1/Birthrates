@@ -46,8 +46,15 @@
         -->
 
         <div id="education-analysis">
-            <h3>Fertility Decline Appears Broad-Based <i>Across</i> Education Levels</h3>
+            <h3>Fertility Decline Appears Broad-Based Across Education And GDP Levels</h3>
             <div class="education-controls">
+                <label>
+                    X-axis:
+                    <select id="education-variable-select">
+                        <option value="education">Female tertiary education</option>
+                        <option value="gdp">GDP per capita</option>
+                    </select>
+                </label>
                 <label>
                     Year:
                     <input type="range" id="education-year-slider" step="1">
@@ -57,9 +64,8 @@
             
                 <div id="education-chart"></div>
                 <p>
-                    Although it is true that countries with higher levels of tertiary education tend to have lower fertility rates, <b>the relationship is not as straightforward as it may seem.</b> 
-                    When we look at fertility rates across different education levels within countries, we find that the decline in birth rates is occurring broadly across all education groups, not just among those with higher education. 
-                    This suggests that while education may play a role in fertility decisions, it is not the sole or even the primary driver of the global fertility decline. 
+                    Although countries with higher education levels or GDP per capita tend to have lower fertility rates, <b>the relationship is not as straightforward as it may seem.</b>
+                    Use the x-axis dropdown to compare fertility against each variable. In both views, the broad decline over time suggests that neither education nor GDP alone explains the global fertility shift.
                 
                 </p>
                 
