@@ -875,6 +875,330 @@ Promise.all([
   });
 })();
 
+(() => {
+  const gdpYearLabel = d3.select("#gdp-year-label");
+  const gdpSlider = d3.select("#gdp-year-slider");
+  const chartWrap = d3.select("#gdp-chart");
+
+  const gdpTooltip = d3
+    .select("body")
+    .append("div")
+    .attr("class", "gdp-tooltip");
+
+  const fmtgdp = d3.format(".2f");
+  const fmtFertilityRate = d3.format(".2f");
+  const fmtPopulation = d3.format(",");
+
+  const margin = { top: 24, right: 24, bottom: 56, left: 64 };
+  const chartWidth = 960;
+  const chartHeight = 520;
+  const innerWidth = chartWidth - margin.left - margin.right;
+  const innerHeight = chartHeight - margin.top - margin.bottom;
+
+  const svg = chartWrap
+    .append("svg")
+    .attr("width", chartWidth)
+    .attr("height", chartHeight)
+    .attr("viewBox", `0 0 ${chartWidth} ${chartHeight}`)
+    .attr("preserveAspectRatio", "xMidYMid meet");
+
+  const g = svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const xAxisG = g
+    .append("g")
+    .attr("transform", `translate(0,${innerHeight})`);
+
+  const yAxisG = g.append("g");
+
+  xAxisG
+    .append("text")
+    .attr("x", innerWidth / 2)
+    .attr("y", 42)
+    .attr("fill", "#111")
+    .attr("text-anchor", "middle")
+    .attr("font-size", 12)
+    .text("GDP (dollars)");
+
+  yAxisG
+    .append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("x", -innerHeight / 2)
+    .attr("y", -48)
+    .attr("fill", "#111")
+    .attr("text-anchor", "middle")
+    .attr("font-size", 12)
+    .text("Fertility rate (births per woman)");
+
+  const bubblesG = g.append("g");
+  const correlationLabel = g.append("text")
+    .attr("x", innerWidth)
+    .attr("y", 10)
+    .attr("text-anchor", "end")
+    .attr("fill", "#334155")
+    .attr("font-size", 12)
+    .attr("font-weight", 600);
+
+  const incomeLevels = [
+    { code: "L", label: "Low income", shortLabel: "Low", color: "#7c3aed" },
+    { code: "LM", label: "Lower-middle income", shortLabel: "Lower-mid", color: "#0f766e" },
+    { code: "UM", label: "Upper-middle income", shortLabel: "Upper-mid", color: "#d97706" },
+    { code: "H", label: "High income", shortLabel: "High", color: "#dc2626" },
+    { code: null, label: "No classification", shortLabel: "N/A", color: "#94a3b8" }
+  ];
+
+  function getIncomeLevel(code) {
+    return incomeLevels.find(level => level.code === code) || incomeLevels[incomeLevels.length - 1];
+  }
+
+  function parseIncomeClassifications(text) {
+    const rows = d3.csvParseRows(text);
+    const yearRow = rows.find(row => row[1] === "Data for calendar year :");
+    const classifications = new Map();
+
+    if (!yearRow) {
+      return classifications;
+    }
+
+    rows.forEach(row => {
+      const iso3 = row[0];
+
+      if (!iso3 || iso3.length !== 3) {
+        return;
+      }
+
+      yearRow.forEach((yearValue, index) => {
+        const year = +yearValue;
+        const code = row[index];
+
+        if (Number.isFinite(year) && ["L", "LM", "UM", "H"].includes(code)) {
+          classifications.set(`${iso3}-${year}`, code);
+        }
+      });
+    });
+
+    return classifications;
+  }
+
+  const legend = g.append("g")
+    .attr("transform", `translate(${innerWidth - 820}, 10)`);
+
+  legend.append("text")
+    .attr("x", 0)
+    .attr("y", 4)
+    .attr("fill", "#334155")
+    .attr("font-size", 11)
+    .attr("font-weight", 700)
+    .text("Income level");
+
+  const legendItems = legend.selectAll("g")
+    .data(incomeLevels)
+    .enter()
+    .append("g")
+    .attr("transform", (d, i) => `translate(${84 + i * 76}, 0)`);
+
+  legendItems.append("circle")
+    .attr("cx", 5)
+    .attr("cy", 0)
+    .attr("r", 4)
+    .attr("fill", d => d.color)
+    .attr("fill-opacity", 0.7);
+
+  legendItems.append("text")
+    .attr("x", 13)
+    .attr("y", 4)
+    .attr("fill", "#334155")
+    .attr("font-size", 10)
+    .text(d => d.shortLabel);
+
+  const sizeLegend = legend.append("g")
+    .attr("transform", "translate(470, 0)");
+
+  sizeLegend.append("circle")
+    .attr("cx", 5)
+    .attr("cy", 0)
+    .attr("r", 7)
+    .attr("fill", "none")
+    .attr("stroke", "#334155")
+    .attr("stroke-width", 1);
+
+  sizeLegend.append("text")
+    .attr("x", 18)
+    .attr("y", 4)
+    .attr("fill", "#334155")
+    .attr("font-size", 10)
+    .text("Size = population");
+
+  Promise.all([
+    d3.csv("data/data.csv"),
+    d3.text("data/income_classifications.csv")
+  ]).then(([data, incomeText]) => {
+    const incomeClassifications = parseIncomeClassifications(incomeText);
+
+    data.forEach(d => {
+      d.year = +d.year;
+      d.fertility = d.fertility === "" ? null : +d.fertility;
+      d.gdp = d.gdp === "" ? null : +d.gdp;
+      d.population = d.population === "" ? null : +d.population;
+    });
+
+    const validData = data.filter(
+      d => d.year != null && d.fertility != null && d.gdp != null && d.population != null
+    );
+
+    const years = Array.from(new Set(validData.map(d => d.year))).sort((a, b) => a - b);
+
+    gdpSlider
+      .attr("min", d3.min(years))
+      .attr("max", d3.max(years))
+      .attr("step", 1)
+      .property("value", d3.min(years));
+
+    const x = d3.scaleLinear()
+      .domain([0, d3.max(validData, d => d.gdp)])
+      .nice()
+      .range([0, innerWidth]);
+
+    const y = d3.scaleLinear()
+      .domain([0, d3.max(validData, d => d.fertility)])
+      .nice()
+      .range([innerHeight, 0]);
+
+    const size = d3.scaleSqrt()
+      .domain(d3.extent(validData, d => d.population))
+      .range([3, 20]);
+
+    xAxisG.call(d3.axisBottom(x).ticks(6));
+    yAxisG.call(d3.axisLeft(y).ticks(6));
+
+    g.append("g")
+      .attr("class", "grid-lines")
+      .attr("stroke", "#eef3f7")
+      .attr("stroke-opacity", 0.35)
+      .attr("stroke-width", 0.7)
+      .attr("pointer-events", "none")
+      .call(d3.axisLeft(y).tickSize(-innerWidth).tickFormat("").ticks(6))
+      .call(g => g.select(".domain").remove())
+      .lower();
+
+    g.append("g")
+      .attr("class", "grid-lines")
+      .attr("transform", `translate(0,${innerHeight})`)
+      .attr("stroke", "#eef3f7")
+      .attr("stroke-opacity", 0.35)
+      .attr("stroke-width", 0.7)
+      .attr("pointer-events", "none")
+      .call(d3.axisBottom(x).tickSize(-innerHeight).tickFormat("").ticks(6))
+      .call(g => g.select(".domain").remove())
+      .lower();
+
+    function pearsonCorrelation(values) {
+      if (values.length < 2) return null;
+
+      const meanX = d3.mean(values, d => d.gdp);
+      const meanY = d3.mean(values, d => d.fertility);
+
+      let numerator = 0;
+      let sumSqX = 0;
+      let sumSqY = 0;
+
+      values.forEach(d => {
+        const dx = d.gdp - meanX;
+        const dy = d.fertility - meanY;
+        numerator += dx * dy;
+        sumSqX += dx * dx;
+        sumSqY += dy * dy;
+      });
+
+      const denominator = Math.sqrt(sumSqX * sumSqY);
+      return denominator ? numerator / denominator : null;
+    }
+
+    function updategdpChart(year) {
+      year = +year;
+      gdpYearLabel.text(year);
+
+      const yearData = validData
+        .filter(d => d.year === year)
+        .map(d => ({
+          ...d,
+          incomeCode: incomeClassifications.get(`${d.iso3}-${year}`) || null
+        }))
+        .sort((a, b) => b.population - a.population);
+
+      const correlation = pearsonCorrelation(yearData);
+      correlationLabel.text(
+        correlation == null
+          ? "Correlation: N/A"
+          : `Correlation (r): ${d3.format(".2f")(correlation)}`
+      );
+
+      const bubbles = bubblesG.selectAll("circle")
+        .data(yearData, d => d.iso3);
+
+      bubbles.exit()
+        .transition()
+        .duration(200)
+        .attr("r", 0)
+        .remove();
+
+      const bubblesEnter = bubbles.enter()
+        .append("circle")
+        .attr("cx", d => x(d.gdp))
+        .attr("cy", d => y(d.fertility))
+        .attr("r", 0)
+        .attr("fill", d => getIncomeLevel(d.incomeCode).color)
+        .attr("fill-opacity", 0.75)
+        .attr("stroke", "#1f2937")
+        .attr("stroke-width", 0.8)
+        .on("mouseover", function(event, d) {
+          const incomeLevel = getIncomeLevel(d.incomeCode);
+
+          d3.select(this)
+            .attr("stroke-width", 1.4)
+            .attr("fill-opacity", 0.9);
+
+          gdpTooltip
+            .style("opacity", 1)
+            .html(`
+              <strong>${d.country}</strong><br/>
+              GDP: ${fmtgdp(d.gdp)} dollars<br/>
+              Fertility: ${fmtFertilityRate(d.fertility)} births per woman<br/>
+              Population: ${fmtPopulation(d.population)}<br/>
+              Income level: ${incomeLevel.label}
+            `);
+        })
+        .on("mousemove", function(event) {
+          gdpTooltip
+            .style("left", `${event.pageX + 10}px`)
+            .style("top", `${event.pageY + 10}px`);
+        })
+        .on("mouseout", function() {
+          d3.select(this)
+            .attr("stroke-width", 0.8)
+            .attr("fill-opacity", 0.75);
+
+          gdpTooltip.style("opacity", 0);
+        });
+
+      bubblesEnter.merge(bubbles)
+        .transition()
+        .duration(350)
+        .attr("cx", d => x(d.gdp))
+        .attr("cy", d => y(d.fertility))
+        .attr("fill", d => getIncomeLevel(d.incomeCode).color)
+        .attr("r", d => size(d.population));
+    }
+
+    updategdpChart(gdpSlider.property("value"));
+
+    gdpSlider.on("input", function() {
+      updategdpChart(this.value);
+    });
+  });
+})();
+
 
 // LIFESTYLE ANALYSIS (independent from map)
 (() => {
