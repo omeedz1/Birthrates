@@ -591,6 +591,7 @@ Promise.all([
 (() => {
   const educationYearLabel = d3.select("#education-year-label");
   const educationSlider = d3.select("#education-year-slider");
+  const variableSelect = d3.select("#education-variable-select");
   const chartWrap = d3.select("#education-chart");
 
   const educationTooltip = d3
@@ -599,8 +600,24 @@ Promise.all([
     .attr("class", "education-tooltip");
 
   const fmtEducation = d3.format(".2f");
+  const fmtGdp = d3.format("$,.0f");
   const fmtFertilityRate = d3.format(".2f");
   const fmtPopulation = d3.format(",");
+
+  const metricOptions = {
+    education: {
+      key: "education",
+      axisLabel: "Female tertiary enrollment (% gross)",
+      tooltipLabel: "Education",
+      format: value => `${fmtEducation(value)}% gross`
+    },
+    gdp: {
+      key: "gdp",
+      axisLabel: "GDP per capita (current US$)",
+      tooltipLabel: "GDP per capita",
+      format: value => fmtGdp(value)
+    }
+  };
 
   const margin = { top: 24, right: 24, bottom: 56, left: 64 };
   const chartWidth = 960;
@@ -625,14 +642,14 @@ Promise.all([
 
   const yAxisG = g.append("g");
 
-  xAxisG
+  const xAxisLabel = xAxisG
     .append("text")
     .attr("x", innerWidth / 2)
     .attr("y", 42)
     .attr("fill", "#111")
     .attr("text-anchor", "middle")
     .attr("font-size", 12)
-    .text("Female tertiary enrollment (% gross)");
+    .text(metricOptions.education.axisLabel);
 
   yAxisG
     .append("text")
@@ -753,11 +770,12 @@ Promise.all([
       d.year = +d.year;
       d.fertility = d.fertility === "" ? null : +d.fertility;
       d.education = d.education === "" ? null : +d.education;
+      d.gdp = d.gdp === "" ? null : +d.gdp;
       d.population = d.population === "" ? null : +d.population;
     });
 
     const validData = data.filter(
-      d => d.year != null && d.fertility != null && d.education != null && d.population != null
+      d => d.year != null && d.fertility != null && d.population != null
     );
 
     const years = Array.from(new Set(validData.map(d => d.year))).sort((a, b) => a - b);
@@ -768,10 +786,7 @@ Promise.all([
       .attr("step", 1)
       .property("value", d3.min(years));
 
-    const x = d3.scaleLinear()
-      .domain([0, d3.max(validData, d => d.education)])
-      .nice()
-      .range([0, innerWidth]);
+    const x = d3.scaleLinear().range([0, innerWidth]);
 
     const y = d3.scaleLinear()
       .domain([0, d3.max(validData, d => d.fertility)])
@@ -782,7 +797,6 @@ Promise.all([
       .domain(d3.extent(validData, d => d.population))
       .range([3, 20]);
 
-    xAxisG.call(d3.axisBottom(x).ticks(6));
     yAxisG.call(d3.axisLeft(y).ticks(6));
 
     g.append("g")
@@ -795,21 +809,19 @@ Promise.all([
       .call(g => g.select(".domain").remove())
       .lower();
 
-    g.append("g")
+    const xGridG = g.append("g")
       .attr("class", "grid-lines")
       .attr("transform", `translate(0,${innerHeight})`)
       .attr("stroke", "#eef3f7")
       .attr("stroke-opacity", 0.35)
       .attr("stroke-width", 0.7)
       .attr("pointer-events", "none")
-      .call(d3.axisBottom(x).tickSize(-innerHeight).tickFormat("").ticks(6))
-      .call(g => g.select(".domain").remove())
       .lower();
 
-    function pearsonCorrelation(values) {
+    function pearsonCorrelation(values, metricKey) {
       if (values.length < 2) return null;
 
-      const meanX = d3.mean(values, d => d.education);
+      const meanX = d3.mean(values, d => d[metricKey]);
       const meanY = d3.mean(values, d => d.fertility);
 
       let numerator = 0;
@@ -817,7 +829,7 @@ Promise.all([
       let sumSqY = 0;
 
       values.forEach(d => {
-        const dx = d.education - meanX;
+        const dx = d[metricKey] - meanX;
         const dy = d.fertility - meanY;
         numerator += dx * dy;
         sumSqX += dx * dx;
@@ -830,17 +842,34 @@ Promise.all([
 
     function updateEducationChart(year) {
       year = +year;
+      const metric = metricOptions[variableSelect.property("value")] || metricOptions.education;
       educationYearLabel.text(year);
 
       const yearData = validData
-        .filter(d => d.year === year)
+        .filter(d => d.year === year && d[metric.key] != null)
         .map(d => ({
           ...d,
           incomeCode: incomeClassifications.get(`${d.iso3}-${year}`) || null
         }))
         .sort((a, b) => b.population - a.population);
 
-      const correlation = pearsonCorrelation(yearData);
+      const xMax = d3.max(validData, d => d[metric.key]) || 1;
+      x.domain([0, xMax]).nice();
+      xAxisLabel.text(metric.axisLabel);
+
+      xAxisG
+        .transition()
+        .duration(300)
+        .call(d3.axisBottom(x).ticks(6));
+      xAxisLabel.raise();
+
+      xGridG
+        .transition()
+        .duration(300)
+        .call(d3.axisBottom(x).tickSize(-innerHeight).tickFormat("").ticks(6))
+        .call(g => g.select(".domain").remove());
+
+      const correlation = pearsonCorrelation(yearData, metric.key);
       correlationLabel.text(
         correlation == null
           ? "Correlation: N/A"
@@ -858,7 +887,7 @@ Promise.all([
 
       const bubblesEnter = bubbles.enter()
         .append("circle")
-        .attr("cx", d => x(d.education))
+        .attr("cx", d => x(d[metric.key]))
         .attr("cy", d => y(d.fertility))
         .attr("r", 0)
         .attr("fill", d => getIncomeLevel(d.incomeCode).color)
@@ -866,6 +895,7 @@ Promise.all([
         .attr("stroke", "#1f2937")
         .attr("stroke-width", 0.8)
         .on("mouseover", function(event, d) {
+          const currentMetric = metricOptions[variableSelect.property("value")] || metricOptions.education;
           const incomeLevel = getIncomeLevel(d.incomeCode);
 
           d3.select(this)
@@ -876,7 +906,7 @@ Promise.all([
             .style("opacity", 1)
             .html(`
               <strong>${d.country}</strong><br/>
-              Education: ${fmtEducation(d.education)}% gross<br/>
+              ${currentMetric.tooltipLabel}: ${currentMetric.format(d[currentMetric.key])}<br/>
               Fertility: ${fmtFertilityRate(d.fertility)} births per woman<br/>
               Population: ${fmtPopulation(d.population)}<br/>
               Income level: ${incomeLevel.label}
@@ -898,7 +928,7 @@ Promise.all([
       bubblesEnter.merge(bubbles)
         .transition()
         .duration(350)
-        .attr("cx", d => x(d.education))
+        .attr("cx", d => x(d[metric.key]))
         .attr("cy", d => y(d.fertility))
         .attr("fill", d => getIncomeLevel(d.incomeCode).color)
         .attr("r", d => size(d.population));
@@ -908,6 +938,10 @@ Promise.all([
 
     educationSlider.on("input", function() {
       updateEducationChart(this.value);
+    });
+
+    variableSelect.on("change", function() {
+      updateEducationChart(educationSlider.property("value"));
     });
   });
 })();

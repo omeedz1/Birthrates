@@ -375,7 +375,29 @@ p {
 }
 
 .education-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
     margin: 10px 0 12px;
+    font-family: "nyt-franklin", Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.education-controls select {
+    margin-left: 6px;
+    padding: 5px 8px;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    background: #fff;
+    font-family: "nyt-franklin", Arial, sans-serif;
+    font-size: 14px;
+}
+
+.education-controls input {
+    vertical-align: middle;
 }
 
 #education-chart {
