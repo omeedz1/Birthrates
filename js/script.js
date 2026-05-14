@@ -3,6 +3,8 @@ const height = 600;
 const introWidth = 960;
 const introHeight = 520;
 
+// INTRO GLOBE
+// Renders the rotating world map and year slider that establish the overall fertility decline.
 const introWrap = d3.select("#intro-vis");
 
 const introControls = introWrap
@@ -120,6 +122,7 @@ Promise.all([
   changeMarkers.append("path")
     .attr("class", "intro-change-arrowhead");
 
+  // Recompute projected paths whenever the globe is dragged or zoomed.
   function redrawIntroGlobe() {
     sphere.attr("d", path);
     graticulePath.attr("d", path);
@@ -237,6 +240,7 @@ Promise.all([
   const introYearLabel = d3.select("#intro-year-label");
   let currentIntroYear = +introSlider.property("value");
 
+  // Orthographic projection only shows one hemisphere; hide change markers on the far side.
   function isPointVisible(coordinates) {
     const rotate = projection.rotate();
     const center = [-rotate[0], -rotate[1]];
@@ -244,12 +248,14 @@ Promise.all([
     return d3.geoDistance(coordinates, center) < Math.PI / 2;
   }
 
+  // Compare a country's selected-year fertility to the 1990 baseline.
   function getFertilityChange(d, year) {
     const row = dataByIsoYear.get(d.iso)?.get(year)?.[0];
 
     return row?.fertility == null || d.baseline == null ? null : row.fertility - d.baseline;
   }
 
+  // Convert fertility change into arrow direction, color, position, and visibility.
   function getChangeMarkerState(d, year) {
     const change = getFertilityChange(d, year);
     const point = projection(d.centroid);
@@ -266,6 +272,7 @@ Promise.all([
     };
   }
 
+  // Update the country-level change arrows after year, drag, or zoom changes.
   function updateChangeMarkers(target, year) {
     target
       .attr("transform", d => {
@@ -309,6 +316,7 @@ Promise.all([
       .attr("fill", d => getChangeMarkerState(d, year).color);
   }
 
+  // Recolor countries and arrows for the selected year.
   function updateIntroMap(year) {
     year = +year;
     currentIntroYear = year;
@@ -423,6 +431,8 @@ Promise.all([
 
 
 
+// EDUCATION / GDP SCATTERPLOT
+// Uses one bubble chart for both x-axis variables so the year slider, legend, and tooltip stay consistent.
 (() => {
   const educationYearLabel = d3.select("#education-year-label");
   const educationSlider = d3.select("#education-year-slider");
@@ -439,6 +449,7 @@ Promise.all([
   const fmtFertilityRate = d3.format(".2f");
   const fmtPopulation = d3.format(",");
 
+  // Dropdown options define the data key plus the axis and tooltip labels for each x-axis variable.
   const metricOptions = {
     education: {
       key: "education",
@@ -513,10 +524,12 @@ Promise.all([
     { code: null, label: "No classification", shortLabel: "N/A", color: "#94a3b8" }
   ];
 
+  // Fall back to the neutral legend color when a country-year has no income classification.
   function getIncomeLevel(code) {
     return incomeLevels.find(level => level.code === code) || incomeLevels[incomeLevels.length - 1];
   }
 
+  // World Bank income classification data is a wide CSV; convert it to iso-year lookup keys.
   function parseIncomeClassifications(text) {
     const rows = d3.csvParseRows(text);
     const yearRow = rows.find(row => row[1] === "Data for calendar year :");
@@ -653,6 +666,7 @@ Promise.all([
       .attr("pointer-events", "none")
       .lower();
 
+    // Lightweight Pearson correlation for the selected year's visible points.
     function pearsonCorrelation(values, metricKey) {
       if (values.length < 2) return null;
 
@@ -675,6 +689,7 @@ Promise.all([
       return denominator ? numerator / denominator : null;
     }
 
+    // Rebuild the scatterplot for the active year and x-axis variable.
     function updateEducationChart(year) {
       year = +year;
       const metric = metricOptions[variableSelect.property("value")] || metricOptions.education;
@@ -783,6 +798,7 @@ Promise.all([
 
 
 // PUBLIC SPENDING ANALYSIS
+// Shows OECD-style family benefit spending as stacked bars, with fertility overlaid as dots.
 (() => {
   const spendingComponents = [
     { key: "public_spending_cash", label: "Cash benefits", color: "#0f766e" },
@@ -955,12 +971,14 @@ Promise.all([
     let hasRenderedPublicSpending = false;
     const transitionDuration = 500;
 
+    // Re-sort and redraw the stacked spending rows for the selected year.
     function updatePublicSpendingChart() {
       const shouldAnimate = hasRenderedPublicSpending;
       const year = +spendingSlider.property("value");
       const sortBy = sortSelect.property("value");
       spendingYearLabel.text(year);
 
+      // Build stacked bar segments from cash, services, and tax-break components.
       const yearData = validData
         .filter(d => d.year === year)
         .map(d => {
@@ -1170,6 +1188,7 @@ Promise.all([
 
 
 // COUNTRY STORYLINES
+// Lets users follow one high-decline country over time against a second contextual metric.
 (() => {
   const chartWrap = d3.select("#country-storyline-chart");
   const countrySelect = d3.select("#storyline-country-select");
@@ -1179,6 +1198,7 @@ Promise.all([
     return;
   }
 
+  // Each metric supplies display labels and formatting for the right-hand axis and tooltip.
   const metricConfig = {
     gdp: {
       label: "GDP per capita",
@@ -1394,6 +1414,7 @@ Promise.all([
     .attr("font-weight", 600)
     .style("display", "none");
 
+  // Normalize empty CSV cells before building scales and line paths.
   function numericOrNull(value) {
     if (value === "") return null;
     const number = +value;
@@ -1445,6 +1466,7 @@ Promise.all([
 
     countrySelect.property("value", countries[0]?.iso3);
 
+    // Redraw the dual-axis timeline whenever the country or comparison metric changes.
     function updateStorylineChart() {
       const iso3 = countrySelect.property("value");
       const metricKey = metricSelect.property("value");
@@ -1550,6 +1572,7 @@ Promise.all([
 
 
 // LIFESTYLE ANALYSIS (independent from map)
+// Animates regional internet penetration, fertility, population, and urbanization from 2005 to 2024.
 (() => {
   const lifestyleRegions = new Set([
     "East Asia & Pacific",
@@ -1749,6 +1772,7 @@ Promise.all([
     return d3.csvParse(cleaned);
   }
 
+  // Pull one year from a wide World Bank row and normalize blanks to null.
   function getYearValue(row, year) {
     if (!row) return null;
     const v = row[String(year)];
@@ -1757,6 +1781,7 @@ Promise.all([
     return Number.isFinite(n) ? n : null;
   }
 
+  // Index WDI rows by displayed country/region name for easy joining across files.
   function byCountryName(rows) {
     const m = new Map();
     for (const r of rows) {
@@ -1790,6 +1815,7 @@ Promise.all([
     let currentYear = minYear;
     let timer = null;
 
+    // Redraw bubbles, population sizes, urbanization colors, and global benchmark lines.
     function updateLifestyleChart(year) {
       year = +year;
       lifestyleYearLabel.text(year);
@@ -1894,7 +1920,7 @@ Promise.all([
 
       circles.exit().transition().duration(200).attr("r", 0).remove();
 
-      // World benchmark lines
+      // The dotted World benchmark lines make regional deviations easier to read.
       if (worldInternet != null && worldFertility != null) {
         worldVLine
           .style("display", null)
@@ -1915,7 +1941,7 @@ Promise.all([
       }
     }
 
-    // Expose per requirement (and useful for debugging)
+    // Expose per requirement and to make console debugging easier.
     window.updateLifestyleChart = updateLifestyleChart;
 
     function setPlaying(isPlaying) {
@@ -1931,6 +1957,7 @@ Promise.all([
       setPlaying(false);
     }
 
+    // Playback advances one year per tick until it reaches the latest available year.
     function startPlayback() {
       if (timer) return;
 
